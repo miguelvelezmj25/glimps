@@ -10,14 +10,14 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:perf-debug.helloWorld"
+    "onCommand:extension.highlight"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "perf-debug.helloWorld",
-        "title": "Hello World"
+        "command": "extension.highlight",
+        "title": "Line Highlighter"
       }
     ]
   },
