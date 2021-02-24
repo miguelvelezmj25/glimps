@@ -10,14 +10,22 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:perf-debug.helloWorld"
+    "onCommand:catCoding.start",
+    "onCommand:catCoding.doRefactor",
+    "onWebviewPanel:catCoding"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "perf-debug.helloWorld",
-        "title": "Hello World"
+        "command": "catCoding.start",
+        "title": "Start cat coding session",
+        "category": "Cat Coding"
+      },
+      {
+        "command": "catCoding.doRefactor",
+        "title": "Do some refactoring",
+        "category": "Cat Coding"
       }
     ]
   },
