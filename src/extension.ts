@@ -1,8 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {Uri} from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -49,12 +49,12 @@ function _globalModel() {
         {} // Webview options. More on these later.
     );
 
-    const onDiskPath = vscode.Uri.file(path.join(workspaceFolders[0].uri.path, 'cat.gif'));
-    const catGifSrc = panel.webview.asWebviewUri(onDiskPath);
-    panel.webview.html = getContent(catGifSrc);
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
+    panel.webview.html = getContent(defaultExecutionTime);
 }
 
-function getContent(cat: Uri) {
+function getContent(defaultExecutionTime: string) {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -63,7 +63,7 @@ function getContent(cat: Uri) {
     <title>Cat Coding</title>
 </head>
 <body>
-    <img src="${cat}" width="300" />
+    Default execution time: ${defaultExecutionTime}
 </body>
 </html>`;
 }
