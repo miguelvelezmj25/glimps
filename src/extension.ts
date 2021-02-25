@@ -3,6 +3,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as parse from 'csv-parse/lib/sync';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -50,11 +51,15 @@ function _globalModel() {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+
+
+    const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'default.csv'), 'utf8'));
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
-    panel.webview.html = getContent(defaultExecutionTime);
+
+    panel.webview.html = getContent(defaultConfig, defaultExecutionTime);
 }
 
-function getContent(defaultExecutionTime: string) {
+function getContent(defaultConfig: string[], defaultExecutionTime: string) {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -63,6 +68,7 @@ function getContent(defaultExecutionTime: string) {
     <title>Cat Coding</title>
 </head>
 <body>
+    ${defaultConfig}
     Default execution time: ${defaultExecutionTime}
 </body>
 </html>`;
