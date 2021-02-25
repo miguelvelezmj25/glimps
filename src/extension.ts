@@ -51,15 +51,13 @@ function _globalModel() {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-
-
     const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'default.csv'), 'utf8'));
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
-
-    panel.webview.html = getContent(defaultConfig, defaultExecutionTime);
+    const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
+    panel.webview.html = getContent(defaultConfig, defaultExecutionTime, perfModel);
 }
 
-function getContent(defaultConfig: string[], defaultExecutionTime: string) {
+function getContent(defaultConfig: string[], defaultExecutionTime: string, perfModel: string[]) {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,8 +66,9 @@ function getContent(defaultConfig: string[], defaultExecutionTime: string) {
     <title>Cat Coding</title>
 </head>
 <body>
-    ${defaultConfig}
-    Default execution time: ${defaultExecutionTime}
+    <div>${defaultConfig}</div>
+    <div>Default execution time: ${defaultExecutionTime}</div>
+    <div>${perfModel}</div>
 </body>
 </html>`;
 }
