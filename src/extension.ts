@@ -6,22 +6,36 @@ import * as vscode from 'vscode';
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "perf-debug" is now active!');
+    // Use the console to output diagnostic information (console.log) and errors (console.error)
+    // This line of code will only be executed once when your extension is activated
+    console.log('Congratulations, your extension "perf-debug" is now active!');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('perf-debug.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
+    // The command has been defined in the package.json file
+    // Now provide the implementation of the command with registerCommand
+    // The commandId parameter must match the command field in package.json
+    let globalModel = vscode.commands.registerCommand('globalModel.start', () => {
+        // Create and show a new webview
+        const panel = vscode.window.createWebviewPanel(
+            'globalModel', // Identifies the type of the webview. Used internally
+            'Global Model', // Title of the panel displayed to the user
+            vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+            {} // Webview options. More on these later.
+        );
+    });
+    context.subscriptions.push(globalModel);
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from perf-debug!');
-	});
-
-	context.subscriptions.push(disposable);
+    let localModels = vscode.commands.registerCommand('localModels.start', () => {
+        // Create and show a new webview
+        const panel = vscode.window.createWebviewPanel(
+            'localModels', // Identifies the type of the webview. Used internally
+            'Local Models', // Title of the panel displayed to the user
+            vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+            {} // Webview options. More on these later.
+        );
+    });
+    context.subscriptions.push(localModels);
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+}

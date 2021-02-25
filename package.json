@@ -10,14 +10,21 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:perf-debug.helloWorld"
+    "onCommand:globalModel.start",
+    "onCommand:localModels.start"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "perf-debug.helloWorld",
-        "title": "Hello World"
+        "command": "globalModel.start",
+        "title": "Display global performance model",
+        "category": "Perf Debug"
+      },
+      {
+        "command": "localModels.start",
+        "title": "Display local performance models",
+        "category": "Perf Debug"
       }
     ]
   },
