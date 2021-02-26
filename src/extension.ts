@@ -43,17 +43,17 @@ function _localModels(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const methods = getMethods(dataDir);
-    panel.webview.postMessage({methods: methods});
+    const methods2DefaultExecutionTimes = getMethods2DefaultExecutionTimes(dataDir);
+    panel.webview.postMessage({methods2DefaultExecutionTimes: methods2DefaultExecutionTimes});
     panel.webview.html = getLocalModelsContent(context, panel);
 }
 
-function getMethods(dataDir: string) {
-    let methods: string[] = [];
-    parse(fs.readFileSync(path.join(dataDir, 'methods.txt'), 'utf8')).forEach((entry: string) => {
-        methods.push(entry[0]);
+function getMethods2DefaultExecutionTimes(dataDir: string) {
+    let method2DefaultExecutionTimes: Method2DefaultExecutionTime[] = [];
+    parse(fs.readFileSync(path.join(dataDir, 'methods.csv'), 'utf8')).forEach((entry: string) => {
+        method2DefaultExecutionTimes.push({method: entry[0], defaultExecutionTime: entry[1]});
     });
-    return methods;
+    return method2DefaultExecutionTimes;
 }
 
 function _globalModel() {
@@ -190,4 +190,9 @@ function getPerfModel(rawPerfModel: string[]) {
         result = result.concat(" }, ");
     });
     return result;
+}
+
+interface Method2DefaultExecutionTime {
+    method: string
+    defaultExecutionTime: string
 }
