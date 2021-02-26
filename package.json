@@ -29,6 +29,10 @@
       }
     ]
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miguelvelezmj25/perf-debug.git"
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -48,6 +52,7 @@
     "eslint": "^7.19.0",
     "glob": "^7.1.6",
     "mocha": "^8.2.1",
+    "tabulator-tables": "^4.9.3",
     "typescript": "^4.1.3",
     "vscode-test": "^1.5.0"
   }
