@@ -11,10 +11,7 @@
             methodSelect.appendChild(element);
         }
 
-        // let hash = new Map();
-        // hash.set(methods2DefaultExecutionTimes[0][0], [{time: 1, option: "Cameron Vis", value: "false"}]);
-        // hash.set(methods2DefaultExecutionTimes[1][0], [{time: 2, option: "Billy Bob", value: "true"}]);
-
+        let methods2Models = getMethods2Models(event.data);
         const table = new Tabulator("#example-table", {
             layout: "fitColumns",
             placeholder: "Awaiting Data, Please Load File",
@@ -27,20 +24,43 @@
 
         //trigger AJAX load on "Load Data via AJAX" button click
         document.getElementById("local-model-trigger").addEventListener("click", function () {
-            const value = document.getElementById("methodSelect").value;
-            document.getElementById("methodName").textContent = "Method Selected: " + value;
-            document.getElementById("defaultExecutionTime").textContent = "Default execution time: " + methods2DefaultExecutionTimes.get(value);
-            // table.setData(hash.get(value));
+            const selectedMethod = document.getElementById("methodSelect").value;
+            document.getElementById("methodName").textContent = "Method Selected: " + selectedMethod;
+            document.getElementById("defaultExecutionTime").textContent = "Default execution time: " + methods2DefaultExecutionTimes.get(selectedMethod);
+            console.log(methods2Models.get(selectedMethod));
+            table.setData(methods2Models.get(selectedMethod));
         });
 
     });
 }());
 
 function getMethods(data) {
-    const dataMethods = data.methods2DefaultExecutionTimes;
+    const dataMethods2Times = data.methods2DefaultExecutionTimes;
     let methods2Time = new Map();
-    for (let i = 0; i < dataMethods.length; i++) {
-        methods2Time.set(dataMethods[i].method, dataMethods[i].defaultExecutionTime);
+    for (let i = 0; i < dataMethods2Times.length; i++) {
+        methods2Time.set(dataMethods2Times[i].method, dataMethods2Times[i].defaultExecutionTime);
     }
     return methods2Time;
+}
+
+function getMethods2Models(data) {
+    const dataMethodsToModels = data.methods2Models;
+    let methods2Models = new Map();
+    for (let i = 0; i < dataMethodsToModels.length; i++) {
+        methods2Models.set(dataMethodsToModels[i].method, getPerfModel(dataMethodsToModels[i].model));
+    }
+    console.log(methods2Models);
+    return methods2Models;
+}
+
+function getPerfModel(rawPerfModel) {
+    let model = [];
+    rawPerfModel.forEach((entry) => {
+        model.push({
+            option: entry[0],
+            value: entry[1],
+            time: entry[2]
+        });
+    });
+    return model;
 }

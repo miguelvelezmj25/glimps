@@ -45,16 +45,30 @@ function _localModels(context: vscode.ExtensionContext) {
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const methods2DefaultExecutionTimes = getMethods2DefaultExecutionTimes(dataDir);
-    panel.webview.postMessage({methods2DefaultExecutionTimes: methods2DefaultExecutionTimes});
+    const methods2Models = getMethods2Models(dataDir);
+    panel.webview.postMessage({
+        methods2DefaultExecutionTimes: methods2DefaultExecutionTimes,
+        methods2Models: methods2Models
+    });
     panel.webview.html = getLocalModelsContent(context, panel);
 }
 
 function getMethods2DefaultExecutionTimes(dataDir: string) {
-    let method2DefaultExecutionTimes: Method2DefaultExecutionTime[] = [];
+    let methods2DefaultExecutionTimes: Method2DefaultExecutionTime[] = [];
     parse(fs.readFileSync(path.join(dataDir, 'methods.csv'), 'utf8')).forEach((entry: string) => {
-        method2DefaultExecutionTimes.push({method: entry[0], defaultExecutionTime: entry[1]});
+        methods2DefaultExecutionTimes.push({method: entry[0], defaultExecutionTime: entry[1]});
     });
-    return method2DefaultExecutionTimes;
+    return methods2DefaultExecutionTimes;
+}
+
+function getMethods2Models(dataDir: string) {
+    let method2Models: Method2Model[] = [];
+    fs.readdirSync(path.join(dataDir, 'localModels')).forEach(file => {
+        const method = path.parse(file).name;
+        const perfModel = parse(fs.readFileSync(path.join(dataDir, 'localModels', file), 'utf8'));
+        method2Models.push({method: method, model: perfModel});
+    });
+    return method2Models;
 }
 
 function _globalModel() {
@@ -197,4 +211,9 @@ function getPerfModel(rawPerfModel: string[]) {
 interface Method2DefaultExecutionTime {
     method: string
     defaultExecutionTime: string
+}
+
+interface Method2Model {
+    method: string
+    model: string[]
 }
