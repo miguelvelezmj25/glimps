@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
     let globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
-    let localModels = vscode.commands.registerCommand('localModels.start', _localModels);
+    let localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     context.subscriptions.push(globalModel, localModels);
 }
 
@@ -25,14 +25,35 @@ export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
 }
 
-function _localModels() {
+function _localModels(context: vscode.ExtensionContext) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        deactivate();
+        return;
+    }
+
     // Create and show a new webview
     const panel = vscode.window.createWebviewPanel(
         'localModels', // Identifies the type of the webview. Used internally
         'Local Models', // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
-        {} // Webview options. More on these later.
+        {
+            enableScripts: true
+        } // Webview options. More on these later.
     );
+
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const methods = getMethods(dataDir);
+    panel.webview.postMessage({methods: methods});
+    panel.webview.html = getLocalModelsContent(context, panel);
+}
+
+function getMethods(dataDir: string) {
+    let methods: string[] = [];
+    parse(fs.readFileSync(path.join(dataDir, 'methods.txt'), 'utf8')).forEach((entry: string) => {
+        methods.push(entry[0]);
+    });
+    return methods;
 }
 
 function _globalModel() {
@@ -56,9 +77,37 @@ function _globalModel() {
     const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'default.csv'), 'utf8'));
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
-    let x = getGlobalModelContent(defaultConfig, defaultExecutionTime, perfModel);
-    console.log(x);
-    panel.webview.html = x;
+    panel.webview.html = getGlobalModelContent(defaultConfig, defaultExecutionTime, perfModel);
+}
+
+function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
+    const localModelsScriptPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'localModels.js'));
+    const localModelsScript = panel.webview.asWebviewUri(localModelsScriptPath);
+
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tabulator Example</title>
+        <link href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/tabulator.min.css" rel="stylesheet">
+        <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
+    </head>
+    <body>
+        <div>
+            <label for="methodSelect">Select a method to display its performance model:</label>
+            <select name="methodSelect" id="methodSelect"></select>     
+        </div>
+        <div><button id="local-model-trigger">Get Performance Model</button></div>
+        <br>
+        <div id="methodName"></div>
+        <br>
+        <div id="defaultExecutionTime"></div>
+        <br>
+        <div id="example-table"></div>
+        <script src="${localModelsScript}"></script>
+    </body>
+    </html>`;
 }
 
 function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime: string, rawPerfModel: string[]) {
