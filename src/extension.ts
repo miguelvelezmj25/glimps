@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
-    let globalModel = vscode.commands.registerCommand('globalModel.start', () => _globalModel(context));
+    let globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
     let localModels = vscode.commands.registerCommand('localModels.start', _localModels);
     context.subscriptions.push(globalModel, localModels);
 }
@@ -35,7 +35,7 @@ function _localModels() {
     );
 }
 
-function _globalModel(context: vscode.ExtensionContext) {
+function _globalModel() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
@@ -56,13 +56,14 @@ function _globalModel(context: vscode.ExtensionContext) {
     const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'default.csv'), 'utf8'));
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
-    let x = getGlobalModelContent(context, panel, defaultConfig, defaultExecutionTime, perfModel);
+    let x = getGlobalModelContent(defaultConfig, defaultExecutionTime, perfModel);
     console.log(x);
     panel.webview.html = x;
 }
 
-function getGlobalModelContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, rawDefaultConfig: string[], defaultExecutionTime: string, rawPerfModel: string[]) {
+function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime: string, rawPerfModel: string[]) {
     const defaultConfig = getDefaultConfig(rawDefaultConfig);
+    const perfModel = getPerfModel(rawPerfModel);
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -76,8 +77,8 @@ function getGlobalModelContent(context: vscode.ExtensionContext, panel: vscode.W
     <body>
         <div id="defaultConfig"></div>
         <script type="text/javascript">                   
-            var defaultConfigData = [${defaultConfig}];        
-            var table = new Tabulator("#defaultConfig", {
+            const defaultConfigData = [${defaultConfig}];        
+            const defaultConfigTable = new Tabulator("#defaultConfig", {
                 data: defaultConfigData,
                 layout: "fitColumns",
                 columns: [
@@ -85,7 +86,7 @@ function getGlobalModelContent(context: vscode.ExtensionContext, panel: vscode.W
                         title: "Default Configuration",
                         columns: [
                             { title: "Option", field: "option", sorter: "string" }, 
-                            { title: "Value",  field: "value",  sorter: "number" }
+                            { title: "Value",  field: "value",  sorter: "string" }
                         ],
                     },
                 ],
@@ -93,8 +94,26 @@ function getGlobalModelContent(context: vscode.ExtensionContext, panel: vscode.W
         </script>
         <br>
         <div id="defaultExecutionTime">Default execution time: ${defaultExecutionTime}</div>
+        <br>
+        <div id="perfModel"></div>
+        <script type="text/javascript">     
+            const perfModelData = [${perfModel}];        
+            const perfModelTable = new Tabulator("#perfModel", {
+                data: perfModelData,
+                layout: "fitColumns",
+                columns: [
+                    {
+                        title: "Performance Model",
+                        columns: [
+                            { title: "Option", field: "option", sorter: "string" }, 
+                            { title: "Value",  field: "value",  sorter: "string" },
+                            { title: "Execution Time (s)",  field: "time",  sorter: "number", hozAlign:"right" }
+                        ],
+                    },
+                ],
+            });
+        </script>
     </body>
-
     </html>`;
 }
 
@@ -110,3 +129,16 @@ function getDefaultConfig(rawDefaultConfig: string[]) {
     return result;
 }
 
+function getPerfModel(rawPerfModel: string[]) {
+    let result = "";
+    rawPerfModel.forEach((entry) => {
+        result = result.concat("{ option: \"");
+        result = result.concat(entry[0]);
+        result = result.concat("\", value: \"");
+        result = result.concat(entry[1]);
+        result = result.concat("\", time: ");
+        result = result.concat(entry[2]);
+        result = result.concat(" }, ");
+    });
+    return result;
+}
