@@ -35,10 +35,10 @@
 }());
 
 function getMethods(data) {
-    const dataMethods2Times = data.methods2DefaultExecutionTimes;
+    const methodBasicInfo = data.methodBasicInfo;
     let methods2Time = new Map();
-    for (let i = 0; i < dataMethods2Times.length; i++) {
-        methods2Time.set(dataMethods2Times[i].method, dataMethods2Times[i].defaultExecutionTime);
+    for (let i = 0; i < methodBasicInfo.length; i++) {
+        methods2Time.set(methodBasicInfo[i].method, methodBasicInfo[i].defaultExecutionTime);
     }
     return methods2Time;
 }

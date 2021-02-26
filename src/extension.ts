@@ -44,21 +44,22 @@ function _localModels(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const methods2DefaultExecutionTimes = getMethods2DefaultExecutionTimes(dataDir);
+    const methodBasicInfo = getMethodsInfo(dataDir);
+    methodBasicInfo.sort((a, b) => (a.reportTime > b.reportTime) ? -1 : 1);
     const methods2Models = getMethods2Models(dataDir);
     panel.webview.postMessage({
-        methods2DefaultExecutionTimes: methods2DefaultExecutionTimes,
+        methodBasicInfo: methodBasicInfo,
         methods2Models: methods2Models
     });
     panel.webview.html = getLocalModelsContent(context, panel);
 }
 
-function getMethods2DefaultExecutionTimes(dataDir: string) {
-    let methods2DefaultExecutionTimes: Method2DefaultExecutionTime[] = [];
+function getMethodsInfo(dataDir: string) {
+    let basicMethodInfo: BasicMethodInfo[] = [];
     parse(fs.readFileSync(path.join(dataDir, 'methods.csv'), 'utf8')).forEach((entry: string) => {
-        methods2DefaultExecutionTimes.push({method: entry[0], defaultExecutionTime: entry[1]});
+        basicMethodInfo.push({method: entry[0], defaultExecutionTime: entry[1], reportTime: +entry[2]});
     });
-    return methods2DefaultExecutionTimes;
+    return basicMethodInfo;
 }
 
 function getMethods2Models(dataDir: string) {
@@ -110,6 +111,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
+        <div>Methods are sorted by their execution time when running the user's configuration.</div>
         <div>
             <label for="methodSelect">Select a method to display its performance model:</label>
             <select name="methodSelect" id="methodSelect"></select>     
@@ -208,9 +210,10 @@ function getPerfModel(rawPerfModel: string[]) {
     return result;
 }
 
-interface Method2DefaultExecutionTime {
+interface BasicMethodInfo {
     method: string
     defaultExecutionTime: string
+    reportTime: number
 }
 
 interface Method2Model {
