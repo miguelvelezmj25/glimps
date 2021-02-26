@@ -38,7 +38,8 @@ function _localModels(context: vscode.ExtensionContext) {
         'Local Models', // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
         {
-            enableScripts: true
+            enableScripts: true,
+            retainContextWhenHidden: true // Might be expensive
         } // Webview options. More on these later.
     );
 
@@ -69,7 +70,8 @@ function _globalModel() {
         'Global Model', // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
         {
-            enableScripts: true
+            enableScripts: true,
+            retainContextWhenHidden: true // Might be expensive
         } // Webview options. More on these later.
     );
 
