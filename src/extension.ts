@@ -35,7 +35,7 @@ function _localModels(context: vscode.ExtensionContext) {
     // Create and show a new webview
     const panel = vscode.window.createWebviewPanel(
         'localModels', // Identifies the type of the webview. Used internally
-        'Local Models', // Title of the panel displayed to the user
+        'Local Performance Models', // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -82,7 +82,7 @@ function _globalModel() {
     // Create and show a new webview
     const panel = vscode.window.createWebviewPanel(
         'globalModel', // Identifies the type of the webview. Used internally
-        'Global Model', // Title of the panel displayed to the user
+        'Global Performance Model', // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
