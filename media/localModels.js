@@ -27,7 +27,6 @@
             const selectedMethod = document.getElementById("methodSelect").value;
             document.getElementById("methodName").textContent = "Method Selected: " + selectedMethod;
             document.getElementById("defaultExecutionTime").textContent = "Default execution time: " + methods2DefaultExecutionTimes.get(selectedMethod);
-            console.log(methods2Models.get(selectedMethod));
             table.setData(methods2Models.get(selectedMethod));
         });
 
