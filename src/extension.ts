@@ -185,7 +185,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         <br>
         <div id="defaultExecutionTime"></div>
         <br>
-        <div id="example-table"></div>
+        <div id="local-model-table"></div>
         <script src="${localModelsScript}"></script>
     </body>
     </html>`;

@@ -12,7 +12,7 @@
         }
 
         let methods2Models = getMethods2Models(event.data);
-        const table = new Tabulator("#example-table", {
+        const table = new Tabulator("#local-model-table", {
             layout: "fitColumns",
             placeholder: "Awaiting Data, Please Load File",
             columns: [
