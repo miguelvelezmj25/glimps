@@ -43,6 +43,49 @@ function _perfProfiles(context: vscode.ExtensionContext) {
             retainContextWhenHidden: true // Might be expensive
         } // Webview options. More on these later.
     );
+
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const configs = getConfigs(dataDir);
+    configs.sort();
+    panel.webview.postMessage({
+        configs: configs
+    });
+    panel.webview.html = getHotspotDiffContent(context, panel);
+}
+
+function getHotspotDiffContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
+    const localModelsScriptPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'hotspotdiff.js'));
+    const localModelsScript = panel.webview.asWebviewUri(localModelsScriptPath);
+
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tabulator Example</title>
+        <link href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/tabulator.min.css" rel="stylesheet">
+        <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
+    </head>
+    <body>
+        <div>Select two configurations to compare their hotspot views:</div>
+        <div>    
+            <select name="configSelect1" id="configSelect1"></select>
+            <select name="configSelect2" id="configSelect2"></select>     
+        </div>
+        <div><button id="local-model-trigger">Compare Hotspots</button></div>
+        <br>
+        <div id="hotspot-diff-table"></div>
+        <script src="${localModelsScript}"></script>
+    </body>
+    </html>`;
+}
+
+function getConfigs(dataDir: string) {
+    let configs: string[] = [];
+    parse(fs.readFileSync(path.join(dataDir, 'configs.txt'), 'utf8')).forEach((entry: string) => {
+        configs.push(entry);
+    });
+    return configs;
 }
 
 function _localModels(context: vscode.ExtensionContext) {
