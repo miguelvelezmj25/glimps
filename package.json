@@ -12,7 +12,8 @@
   ],
   "activationEvents": [
     "onCommand:globalModel.start",
-    "onCommand:localModels.start"
+    "onCommand:localModels.start",
+    "onCommand:perfProfiles.start"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -25,6 +26,11 @@
       {
         "command": "localModels.start",
         "title": "Display local performance models",
+        "category": "Perf Debug"
+      },
+      {
+        "command": "perfProfiles.start",
+        "title": "Compare hotspot profiles",
         "category": "Perf Debug"
       }
     ]

@@ -15,14 +15,34 @@ export function activate(context: vscode.ExtensionContext) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
-    let globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
-    let localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
-    context.subscriptions.push(globalModel, localModels);
+    const globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
+    const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
+    const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
+    context.subscriptions.push(globalModel, localModels, perfProfiles);
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
+}
+
+function _perfProfiles(context: vscode.ExtensionContext) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        deactivate();
+        return;
+    }
+
+    // Create and show a new webview
+    const panel = vscode.window.createWebviewPanel(
+        'perfProfiles', // Identifies the type of the webview. Used internally
+        'Hotspot Diff', // Title of the panel displayed to the user
+        vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+        {
+            enableScripts: true,
+            retainContextWhenHidden: true // Might be expensive
+        } // Webview options. More on these later.
+    );
 }
 
 function _localModels(context: vscode.ExtensionContext) {
