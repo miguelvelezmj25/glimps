@@ -5,6 +5,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as parse from 'csv-parse/lib/sync';
 
+const request = require('sync-request');
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -47,16 +49,37 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const configs = getConfigs(dataDir);
     configs.sort();
-    panel.webview.postMessage({
-        configs: configs
-    });
-    panel.webview.html = getHotspotDiffContent(context, panel);
+    const options = getOptions(configs);
+
+    panel.webview.html = getHotspotDiffContent(options, "Config1", "Config2", "{}");
+
+    // Handle messages from the webview
+    panel.webview.onDidReceiveMessage(
+        message => {
+            console.log(message.config1 + " - " + message.config2);
+            var res = request('GET', 'http://localhost:8001/test');
+            vscode.window.showErrorMessage("" + res.getBody());
+            panel.webview.html = getHotspotDiffContent(options, message.config1, message.config2, "" + res.getBody());
+            return;
+        },
+        undefined,
+        context.subscriptions
+    );
 }
 
-function getHotspotDiffContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
-    const localModelsScriptPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'hotspotdiff.js'));
-    const localModelsScript = panel.webview.asWebviewUri(localModelsScriptPath);
+function getOptions(configs: string[]) {
+    let options = "";
+    for (const config of configs) {
+        options = options.concat("<option value=\"");
+        options = options.concat(config);
+        options = options.concat("\">");
+        options = options.concat(config);
+        options = options.concat("</option>");
+    }
+    return options;
+}
 
+function getHotspotDiffContent(options: string, config1: string, config2: string, hotspotDiffData: string) {
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -69,13 +92,42 @@ function getHotspotDiffContent(context: vscode.ExtensionContext, panel: vscode.W
     <body>
         <div>Select two configurations to compare their hotspot views:</div>
         <div>    
-            <select name="configSelect1" id="configSelect1"></select>
-            <select name="configSelect2" id="configSelect2"></select>     
+            <select name="configSelect1" id="configSelect1">
+                ${options}
+            </select>
+            <select name="configSelect2" id="configSelect2">
+                ${options}
+            </select>     
         </div>
-        <div><button id="local-model-trigger">Compare Hotspots</button></div>
+        <div><button id="hotspot-diff-trigger">Compare Hotspots</button></div>
         <br>
         <div id="hotspot-diff-table"></div>
-        <script src="${localModelsScript}"></script>
+        <script type="text/javascript">                                       
+            const hotspotDiffData = [${hotspotDiffData}];      
+            const table = new Tabulator("#hotspot-diff-table", {
+                data: hotspotDiffData,
+                layout: "fitColumns",
+                columns: [
+                    {title: "Option", field: "option", sorter: "string"},
+                    {title: "${config1}", field: "config1", sorter: "number", hozAlign: "right"},
+                    {title: "${config2}", field: "config2", sorter: "number", hozAlign: "right"}
+                ],
+            }); 
+            
+            (function () {
+                const vscode = acquireVsCodeApi();
+                
+                document.getElementById("hotspot-diff-trigger").addEventListener("click", function () {                    
+                    const config1 = document.getElementById("configSelect1").value;
+                    const config2 = document.getElementById("configSelect2").value;
+                                     
+                    vscode.postMessage({
+                        config1: config1,
+                        config2: config2
+                    });
+                });
+            }())
+        </script>
     </body>
     </html>`;
 }

@@ -61,6 +61,7 @@
     "vscode-test": "1.5.1"
   },
   "dependencies": {
-    "csv-parse": "4.15.3"
+    "csv-parse": "4.15.3",
+    "sync-request": "6.1.0"
   }
 }
