@@ -48,7 +48,6 @@ function getMethods2Models(data) {
     for (let i = 0; i < dataMethodsToModels.length; i++) {
         methods2Models.set(dataMethodsToModels[i].method, getPerfModel(dataMethodsToModels[i].model));
     }
-    console.log(methods2Models);
     return methods2Models;
 }
 
