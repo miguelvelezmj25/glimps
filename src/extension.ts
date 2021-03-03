@@ -47,13 +47,23 @@ function _slicing() {
         } // Webview options. More on these later.
     );
 
-    var res = request('POST', 'http://localhost:8002/slice',
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const sliceInfo = getSliceInfo(dataDir);
+    const programName = sliceInfo.programName;
+    const port = sliceInfo.port;
+
+    var res = request('POST', 'http://localhost:' + port + '/slice',
         {
             json: {}
         }
     );
     const response = res.getBody() + "";
     console.log(response);
+}
+
+function getSliceInfo(dataDir: string) {
+    const sliceInfo = parse(fs.readFileSync(path.join(dataDir, 'sliceInfo.csv'), 'utf8'))[0];
+    return {programName: sliceInfo[0], port: sliceInfo[1]};
 }
 
 function _perfProfiles(context: vscode.ExtensionContext) {
