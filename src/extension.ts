@@ -113,7 +113,8 @@ function _sliceSource(context: vscode.ExtensionContext) {
 }
 
 function _slicing(context: vscode.ExtensionContext) {
-    if (!vscode.workspace.workspaceFolders) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
         deactivate();
         return;
     }
@@ -131,6 +132,11 @@ function _slicing(context: vscode.ExtensionContext) {
 
     slicingPanel.webview.html = getSlicingContent();
 
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const sliceInfo = getSliceInfo(dataDir);
+    const programName = sliceInfo.programName;
+    const port = sliceInfo.port;
+
     // Handle messages from the webview
     slicingPanel.webview.onDidReceiveMessage(
         message => {
@@ -145,24 +151,27 @@ function _slicing(context: vscode.ExtensionContext) {
                     target = -1;
                     slicingPanel.webview.html = getSlicingContent();
                     return;
+                case 'slice':
+                    if (sourceClass === "" || sources.size === 0 || targetClass === "" || target <= 0) {
+                        vscode.window.showErrorMessage("Select sources and targets to slice");
+                        return;
+                    }
+                    const res = request('POST', 'http://localhost:' + port + '/slice',
+                        {
+                            json: {
+                                sourceClass: sourceClass,
+                                targetClass: targetClass,
+                            }
+                        }
+                    );
+                    const response = res.getBody() + "";
+                    console.log(response);
+                    return;
             }
         },
         undefined,
         context.subscriptions
     );
-
-    // const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    // const sliceInfo = getSliceInfo(dataDir);
-    // const programName = sliceInfo.programName;
-    // const port = sliceInfo.port;
-    //
-    // var res = request('POST', 'http://localhost:' + port + '/slice',
-    //     {
-    //         json: {}
-    //     }
-    // );
-    // const response = res.getBody() + "";
-    // console.log(response);
 }
 
 function getSliceInfo(dataDir: string) {
@@ -207,6 +216,12 @@ function getSlicingContent() {
                 document.getElementById("clear-trigger").addEventListener("click", function () {                    
                     vscode.postMessage({
                         command: 'clear'
+                    });
+                });
+                
+                document.getElementById("slice-trigger").addEventListener("click", function () {                    
+                    vscode.postMessage({
+                        command: 'slice'
                     });
                 });
             }())
