@@ -14,7 +14,8 @@
     "onCommand:globalModel.start",
     "onCommand:localModels.start",
     "onCommand:perfProfiles.start",
-    "onCommand:slicing.start"
+    "onCommand:slicing.start",
+    "onCommand:miguel.start"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -38,8 +39,22 @@
         "command": "slicing.start",
         "title": "Slice options to hotspots",
         "category": "Perf Debug"
+      },
+      {
+        "command": "miguel.start",
+        "title": "Display something",
+        "category": "Perf Debug"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "miguel.start",
+          "group": "slicing",
+          "when": "editorTextFocus"
+        }
+      ]
+    }
   },
   "repository": {
     "type": "git",

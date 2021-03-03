@@ -7,6 +7,9 @@ import * as parse from 'csv-parse/lib/sync';
 
 const request = require('sync-request');
 
+let sourceClass = "";
+let sources = new Set();
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -21,7 +24,8 @@ export function activate(context: vscode.ExtensionContext) {
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicing = vscode.commands.registerCommand('slicing.start', _slicing);
-    context.subscriptions.push(globalModel, localModels, perfProfiles, slicing);
+    const something = vscode.commands.registerCommand('miguel.start', _something);
+    context.subscriptions.push(globalModel, localModels, perfProfiles, something);
 }
 
 // this method is called when your extension is deactivated
@@ -29,36 +33,72 @@ export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
 }
 
+function _something() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        deactivate();
+        return;
+    }
+    if (!vscode.window.activeTextEditor) {
+        vscode.window.showInformationMessage("Open a file first to toggle bookmarks");
+        return;
+    }
+
+    if (workspaceFolders.length > 1) {
+        vscode.window.showInformationMessage("Workspace folders has more than 1 entry");
+        return;
+    }
+    const selections = vscode.window.activeTextEditor.selections;
+    if (selections.length !== 1) {
+        vscode.window.showInformationMessage("Selection has more than one element");
+        return;
+    }
+
+    if (sourceClass === "") {
+        let filePath = vscode.window.activeTextEditor.document.uri.path;
+        filePath = filePath.replace(workspaceFolders[0].uri.path, "");
+        sourceClass = filePath.replace("/src/main/java/", "");
+    }
+
+    const selection = selections[0];
+    sources.add(selection.start.line);
+
+    console.log(sourceClass);
+    console.log(sources);
+}
+
 function _slicing() {
+    console.log("WHATS UP?");
+
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
         return;
     }
 
-    // Create and show a new webview
-    const panel = vscode.window.createWebviewPanel(
-        'slicing', // Identifies the type of the webview. Used internally
-        'Program Slicing', // Title of the panel displayed to the user
-        vscode.ViewColumn.One, // Editor column to show the new webview panel in.
-        {
-            enableScripts: true,
-            retainContextWhenHidden: true // Might be expensive
-        } // Webview options. More on these later.
-    );
-
-    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const sliceInfo = getSliceInfo(dataDir);
-    const programName = sliceInfo.programName;
-    const port = sliceInfo.port;
-
-    var res = request('POST', 'http://localhost:' + port + '/slice',
-        {
-            json: {}
-        }
-    );
-    const response = res.getBody() + "";
-    console.log(response);
+    // // Create and show a new webview
+    // const panel = vscode.window.createWebviewPanel(
+    //     'slicing', // Identifies the type of the webview. Used internally
+    //     'Program Slicing', // Title of the panel displayed to the user
+    //     vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+    //     {
+    //         enableScripts: true,
+    //         retainContextWhenHidden: true // Might be expensive
+    //     } // Webview options. More on these later.
+    // );
+    //
+    // const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    // const sliceInfo = getSliceInfo(dataDir);
+    // const programName = sliceInfo.programName;
+    // const port = sliceInfo.port;
+    //
+    // var res = request('POST', 'http://localhost:' + port + '/slice',
+    //     {
+    //         json: {}
+    //     }
+    // );
+    // const response = res.getBody() + "";
+    // console.log(response);
 }
 
 function getSliceInfo(dataDir: string) {
