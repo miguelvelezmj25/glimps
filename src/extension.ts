@@ -8,7 +8,7 @@ import * as parse from 'csv-parse/lib/sync';
 const request = require('sync-request');
 
 let sourceClass = "";
-let sources = new Set();
+let sources = new Set<Number>();
 
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
@@ -25,9 +25,9 @@ export function activate(context: vscode.ExtensionContext) {
     const globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
-    const slicingSource = vscode.commands.registerCommand('sliceSource.start', _sliceSource);
+    const slicingSource = vscode.commands.registerCommand('sliceSource.start', () => _sliceSource(context));
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', _sliceTarget);
-    const slicing = vscode.commands.registerCommand('slicing.start', _slicing);
+    const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
     context.subscriptions.push(globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
 }
 
@@ -40,7 +40,7 @@ function _sliceTarget() {
     console.log("Implement selecting slice target");
 }
 
-function _sliceSource() {
+function _sliceSource(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
@@ -73,11 +73,11 @@ function _sliceSource() {
     if (slicingPanel) {
         slicingPanel.webview.html = getSlicingContent();
     } else {
-        _slicing();
+        _slicing(context);
     }
 }
 
-function _slicing() {
+function _slicing(context: vscode.ExtensionContext) {
     if (!vscode.workspace.workspaceFolders) {
         deactivate();
         return;
@@ -96,6 +96,24 @@ function _slicing() {
 
     slicingPanel.webview.html = getSlicingContent();
 
+    // Handle messages from the webview
+    slicingPanel.webview.onDidReceiveMessage(
+        message => {
+            switch (message.command) {
+                case 'clear':
+                    if (!slicingPanel) {
+                        return;
+                    }
+                    sourceClass = "";
+                    sources = new Set<Number>();
+                    slicingPanel.webview.html = getSlicingContent();
+                    return;
+            }
+        },
+        undefined,
+        context.subscriptions
+    );
+
     // const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     // const sliceInfo = getSliceInfo(dataDir);
     // const programName = sliceInfo.programName;
@@ -110,11 +128,13 @@ function _slicing() {
     // console.log(response);
 }
 
-function getSlicingContent() {
-    const sortedSources: number[] = [];
-    sources.forEach(v => sortedSources.push(Number(v)));
-    sortedSources.sort((a, b) => (a > b) ? 1 : -1);
+function getSliceInfo(dataDir: string) {
+    const sliceInfo = parse(fs.readFileSync(path.join(dataDir, 'sliceInfo.csv'), 'utf8'))[0];
+    return {programName: sliceInfo[0], port: sliceInfo[1]};
+}
 
+function getSlicingContent() {
+    const sortedSources = Array.from(sources).sort((a, b) => (a > b) ? 1 : -1);
     let sourceList = '';
     sortedSources.forEach(function (source) {
         sourceList += '<li>' + sourceClass + ":" + source + '</li>';
@@ -135,13 +155,20 @@ function getSlicingContent() {
         </div>
         <br>
         <div><button id="slice-trigger">Slice</button> <button id="clear-trigger">Clear</button></div>
+        <script type="text/javascript">                                                   
+            (function () {
+                const vscode = acquireVsCodeApi();
+                
+                document.getElementById("clear-trigger").addEventListener("click", function () {                    
+                    vscode.postMessage({
+                        command: 'clear'
+                    });
+                });
+            }())
+        </script>
+        
     </body>
     </html>`;
-}
-
-function getSliceInfo(dataDir: string) {
-    const sliceInfo = parse(fs.readFileSync(path.join(dataDir, 'sliceInfo.csv'), 'utf8'))[0];
-    return {programName: sliceInfo[0], port: sliceInfo[1]};
 }
 
 function _perfProfiles(context: vscode.ExtensionContext) {
@@ -172,24 +199,27 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     // Handle messages from the webview
     panel.webview.onDidReceiveMessage(
         message => {
-            const config1 = message.config1;
-            const config2 = message.config2;
-            var res = request('POST', 'http://localhost:8001/diff',
-                {
-                    json: {
-                        programName: "Convert",
-                        config1: "REPORT",
-                        // config1: config1,
-                        config2: "SKIP_UPSCALING"
-                        // config2: config2
-                    }
-                }
-            );
-            const response = res.getBody() + "";
-            const x = getHotspotDiffContent(options, config1, config2, response);
-            console.log(x);
-            panel.webview.html = x;
-            return;
+            switch (message.command) {
+                case 'diff' :
+                    const config1 = message.config1;
+                    const config2 = message.config2;
+                    var res = request('POST', 'http://localhost:8001/diff',
+                        {
+                            json: {
+                                programName: "Convert",
+                                config1: "REPORT",
+                                // config1: config1,
+                                config2: "SKIP_UPSCALING"
+                                // config2: config2
+                            }
+                        }
+                    );
+                    const response = res.getBody() + "";
+                    const x = getHotspotDiffContent(options, config1, config2, response);
+                    console.log(x);
+                    panel.webview.html = x;
+                    return;
+            }
         },
         undefined,
         context.subscriptions
@@ -253,6 +283,7 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
                     const config2 = document.getElementById("configSelect2").value;
                                      
                     vscode.postMessage({
+                        command: 'diff',
                         config1: config1,
                         config2: config2
                     });
