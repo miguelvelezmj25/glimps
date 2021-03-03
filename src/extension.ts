@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import {WorkspaceFolder} from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as parse from 'csv-parse/lib/sync';
@@ -9,6 +10,8 @@ const request = require('sync-request');
 
 let sourceClass = "";
 let sources = new Set<Number>();
+let targetClass = "";
+let target: number = -1;
 
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
@@ -26,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicingSource = vscode.commands.registerCommand('sliceSource.start', () => _sliceSource(context));
-    const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', _sliceTarget);
+    const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', () => _sliceTarget(context));
     const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
     context.subscriptions.push(globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
 }
@@ -36,8 +39,53 @@ export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
 }
 
-function _sliceTarget() {
+function selectForSlice(workspaceFolders: ReadonlyArray<WorkspaceFolder>) {
+    if (!vscode.window.activeTextEditor) {
+        vscode.window.showInformationMessage("Open a file first to toggle bookmarks");
+        return {};
+    }
+
+    if (workspaceFolders.length > 1) {
+        vscode.window.showInformationMessage("Workspace folders has more than 1 entry");
+        return {};
+    }
+    const selections = vscode.window.activeTextEditor.selections;
+    if (selections.length !== 1) {
+        vscode.window.showInformationMessage("Selection has more than one element");
+        return {};
+    }
+
+    let filePath = vscode.window.activeTextEditor.document.uri.path;
+    filePath = filePath.replace(workspaceFolders[0].uri.path, "");
+    filePath = filePath.replace("/src/main/java/", "");
+
+    const selection = selections[0];
+    const line = selection.start.line + 1;
+
+    return {filePath: filePath, line: line};
+}
+
+function _sliceTarget(context: vscode.ExtensionContext) {
     console.log("Implement selecting slice target");
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        deactivate();
+        return;
+    }
+
+    const sliceData = selectForSlice(workspaceFolders);
+    if (sliceData.filePath === undefined || sliceData.line === undefined) {
+        return;
+    }
+
+    targetClass = sliceData.filePath;
+    target = sliceData.line;
+
+    if (slicingPanel) {
+        slicingPanel.webview.html = getSlicingContent();
+    } else {
+        _slicing(context);
+    }
 }
 
 function _sliceSource(context: vscode.ExtensionContext) {
@@ -46,29 +94,16 @@ function _sliceSource(context: vscode.ExtensionContext) {
         deactivate();
         return;
     }
-    if (!vscode.window.activeTextEditor) {
-        vscode.window.showInformationMessage("Open a file first to toggle bookmarks");
-        return;
-    }
 
-    if (workspaceFolders.length > 1) {
-        vscode.window.showInformationMessage("Workspace folders has more than 1 entry");
-        return;
-    }
-    const selections = vscode.window.activeTextEditor.selections;
-    if (selections.length !== 1) {
-        vscode.window.showInformationMessage("Selection has more than one element");
+    const sliceData = selectForSlice(workspaceFolders);
+    if (sliceData.filePath === undefined || sliceData.line === undefined) {
         return;
     }
 
     if (sourceClass === "") {
-        let filePath = vscode.window.activeTextEditor.document.uri.path;
-        filePath = filePath.replace(workspaceFolders[0].uri.path, "");
-        sourceClass = filePath.replace("/src/main/java/", "");
+        sourceClass = sliceData.filePath;
     }
-
-    const selection = selections[0];
-    sources.add(selection.start.line + 1);
+    sources.add(sliceData.line);
 
     if (slicingPanel) {
         slicingPanel.webview.html = getSlicingContent();
@@ -106,6 +141,8 @@ function _slicing(context: vscode.ExtensionContext) {
                     }
                     sourceClass = "";
                     sources = new Set<Number>();
+                    targetClass = "";
+                    target = -1;
                     slicingPanel.webview.html = getSlicingContent();
                     return;
             }
@@ -135,11 +172,19 @@ function getSliceInfo(dataDir: string) {
 
 function getSlicingContent() {
     const sortedSources = Array.from(sources).sort((a, b) => (a > b) ? 1 : -1);
-    let sourceList = '';
-    sortedSources.forEach(function (source) {
-        sourceList += '<li>' + sourceClass + ":" + source + '</li>';
-    });
-    sourceList = '<ul>' + sourceList + '</ul>';
+    let sourceList = '<ul><li>Select sources</li></ul>';
+    if (sources.size > 0) {
+        sourceList = '';
+        sortedSources.forEach(function (source) {
+            sourceList += '<li>' + sourceClass + ":" + source + '</li>';
+        });
+        sourceList = '<ul>' + sourceList + '</ul>';
+    }
+
+    let targetList = '<ul><li>Select a target</li></ul>';
+    if (target > 0) {
+        targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
+    }
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -151,7 +196,7 @@ function getSlicingContent() {
     <body>
         <div>
             Sources: ${sourceList} 
-            Targets:
+            Targets: ${targetList} 
         </div>
         <br>
         <div><button id="slice-trigger">Slice</button> <button id="clear-trigger">Clear</button></div>
