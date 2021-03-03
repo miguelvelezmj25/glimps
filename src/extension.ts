@@ -56,10 +56,23 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     // Handle messages from the webview
     panel.webview.onDidReceiveMessage(
         message => {
-            console.log(message.config1 + " - " + message.config2);
-            var res = request('GET', 'http://localhost:8001/test');
-            vscode.window.showErrorMessage("" + res.getBody());
-            panel.webview.html = getHotspotDiffContent(options, message.config1, message.config2, "" + res.getBody());
+            const config1 = message.config1;
+            const config2 = message.config2;
+            var res = request('POST', 'http://localhost:8001/diff',
+                {
+                    json: {
+                        programName: "Convert",
+                        config1: "REPORT",
+                        // config1: config1,
+                        config2: "SKIP_UPSCALING"
+                        // config2: config2
+                    }
+                }
+            );
+            const response = res.getBody() + "";
+            const x = getHotspotDiffContent(options, config1, config2, response);
+            console.log(x);
+            panel.webview.html = x;
             return;
         },
         undefined,
@@ -106,9 +119,11 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
             const hotspotDiffData = [${hotspotDiffData}];      
             const table = new Tabulator("#hotspot-diff-table", {
                 data: hotspotDiffData,
+                dataTree:true,
+                dataTreeStartExpanded:false,
                 layout: "fitColumns",
                 columns: [
-                    {title: "Option", field: "option", sorter: "string"},
+                    {title: "Hot Spot", field: "method", sorter: "string"},
                     {title: "${config1}", field: "config1", sorter: "number", hozAlign: "right"},
                     {title: "${config2}", field: "config2", sorter: "number", hozAlign: "right"}
                 ],
