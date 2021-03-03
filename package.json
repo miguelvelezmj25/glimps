@@ -13,7 +13,8 @@
   "activationEvents": [
     "onCommand:globalModel.start",
     "onCommand:localModels.start",
-    "onCommand:perfProfiles.start"
+    "onCommand:perfProfiles.start",
+    "onCommand:slicing.start"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -31,6 +32,11 @@
       {
         "command": "perfProfiles.start",
         "title": "Compare hotspot profiles",
+        "category": "Perf Debug"
+      },
+      {
+        "command": "slicing.start",
+        "title": "Slice options to hotspots",
         "category": "Perf Debug"
       }
     ]

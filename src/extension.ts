@@ -20,12 +20,32 @@ export function activate(context: vscode.ExtensionContext) {
     const globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
-    context.subscriptions.push(globalModel, localModels, perfProfiles);
+    const slicing = vscode.commands.registerCommand('slicing.start', _slicing);
+    context.subscriptions.push(globalModel, localModels, perfProfiles, slicing);
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
+}
+
+function _slicing() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        deactivate();
+        return;
+    }
+
+    // Create and show a new webview
+    const panel = vscode.window.createWebviewPanel(
+        'slicing', // Identifies the type of the webview. Used internally
+        'Program Slicing', // Title of the panel displayed to the user
+        vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+        {
+            enableScripts: true,
+            retainContextWhenHidden: true // Might be expensive
+        } // Webview options. More on these later.
+    );
 }
 
 function _perfProfiles(context: vscode.ExtensionContext) {
