@@ -15,7 +15,8 @@
     "onCommand:localModels.start",
     "onCommand:perfProfiles.start",
     "onCommand:slicing.start",
-    "onCommand:miguel.start"
+    "onCommand:sliceSource.start",
+    "onCommand:sliceTarget.start"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -41,15 +42,25 @@
         "category": "Perf Debug"
       },
       {
-        "command": "miguel.start",
-        "title": "Display something",
+        "command": "sliceSource.start",
+        "title": "Add slicing source",
+        "category": "Perf Debug"
+      },
+      {
+        "command": "sliceTarget.start",
+        "title": "Add slicing target",
         "category": "Perf Debug"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "miguel.start",
+          "command": "sliceSource.start",
+          "group": "slicing",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "sliceTarget.start",
           "group": "slicing",
           "when": "editorTextFocus"
         }

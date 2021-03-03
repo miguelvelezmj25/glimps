@@ -23,9 +23,10 @@ export function activate(context: vscode.ExtensionContext) {
     const globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
+    const slicingSource = vscode.commands.registerCommand('sliceSource.start', _sliceSource);
+    const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', _sliceTarget);
     const slicing = vscode.commands.registerCommand('slicing.start', _slicing);
-    const something = vscode.commands.registerCommand('miguel.start', _something);
-    context.subscriptions.push(globalModel, localModels, perfProfiles, something);
+    context.subscriptions.push(globalModel, localModels, perfProfiles, slicingSource, slicingTarget);
 }
 
 // this method is called when your extension is deactivated
@@ -33,7 +34,11 @@ export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
 }
 
-function _something() {
+function _sliceTarget() {
+    console.log("Implement selecting slice target");
+}
+
+function _sliceSource() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
