@@ -10,6 +10,8 @@ const request = require('sync-request');
 let sourceClass = "";
 let sources = new Set();
 
+let slicingPanel: vscode.WebviewPanel | undefined = undefined;
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -26,7 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
     const slicingSource = vscode.commands.registerCommand('sliceSource.start', _sliceSource);
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', _sliceTarget);
     const slicing = vscode.commands.registerCommand('slicing.start', _slicing);
-    context.subscriptions.push(globalModel, localModels, perfProfiles, slicingSource, slicingTarget);
+    context.subscriptions.push(globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
 }
 
 // this method is called when your extension is deactivated
@@ -66,32 +68,34 @@ function _sliceSource() {
     }
 
     const selection = selections[0];
-    sources.add(selection.start.line);
+    sources.add(selection.start.line + 1);
 
-    console.log(sourceClass);
-    console.log(sources);
+    if (slicingPanel) {
+        slicingPanel.webview.html = getSlicingContent();
+    } else {
+        _slicing();
+    }
 }
 
 function _slicing() {
-    console.log("WHATS UP?");
-
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
+    if (!vscode.workspace.workspaceFolders) {
         deactivate();
         return;
     }
 
-    // // Create and show a new webview
-    // const panel = vscode.window.createWebviewPanel(
-    //     'slicing', // Identifies the type of the webview. Used internally
-    //     'Program Slicing', // Title of the panel displayed to the user
-    //     vscode.ViewColumn.One, // Editor column to show the new webview panel in.
-    //     {
-    //         enableScripts: true,
-    //         retainContextWhenHidden: true // Might be expensive
-    //     } // Webview options. More on these later.
-    // );
-    //
+    // Create and show a new webview
+    slicingPanel = vscode.window.createWebviewPanel(
+        'slicing', // Identifies the type of the webview. Used internally
+        'Program Slicing', // Title of the panel displayed to the user
+        vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
+        {
+            enableScripts: true,
+            retainContextWhenHidden: true // Might be expensive
+        } // Webview options. More on these later.
+    );
+
+    slicingPanel.webview.html = getSlicingContent();
+
     // const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     // const sliceInfo = getSliceInfo(dataDir);
     // const programName = sliceInfo.programName;
@@ -104,6 +108,35 @@ function _slicing() {
     // );
     // const response = res.getBody() + "";
     // console.log(response);
+}
+
+function getSlicingContent() {
+    const sortedSources: number[] = [];
+    sources.forEach(v => sortedSources.push(Number(v)));
+    sortedSources.sort((a, b) => (a > b) ? 1 : -1);
+
+    let sourceList = '';
+    sortedSources.forEach(function (source) {
+        sourceList += '<li>' + sourceClass + ":" + source + '</li>';
+    });
+    sourceList = '<ul>' + sourceList + '</ul>';
+
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Program Slicing</title>
+    </head>
+    <body>
+        <div>
+            Sources: ${sourceList} 
+            Targets:
+        </div>
+        <br>
+        <div><button id="slice-trigger">Slice</button> <button id="clear-trigger">Clear</button></div>
+    </body>
+    </html>`;
 }
 
 function getSliceInfo(dataDir: string) {
@@ -122,7 +155,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     const panel = vscode.window.createWebviewPanel(
         'perfProfiles', // Identifies the type of the webview. Used internally
         'Hotspot Diff', // Title of the panel displayed to the user
-        vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+        vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
             retainContextWhenHidden: true // Might be expensive
@@ -249,7 +282,7 @@ function _localModels(context: vscode.ExtensionContext) {
     const panel = vscode.window.createWebviewPanel(
         'localModels', // Identifies the type of the webview. Used internally
         'Local Performance Models', // Title of the panel displayed to the user
-        vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+        vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
             retainContextWhenHidden: true // Might be expensive
@@ -296,7 +329,7 @@ function _globalModel() {
     const panel = vscode.window.createWebviewPanel(
         'globalModel', // Identifies the type of the webview. Used internally
         'Global Performance Model', // Title of the panel displayed to the user
-        vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+        vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
             retainContextWhenHidden: true // Might be expensive
