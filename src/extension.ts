@@ -145,6 +145,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     if (!slicingPanel) {
                         return;
                     }
+
                     sourceClass = "";
                     sources = new Set<Number>();
                     targetClass = "";
@@ -164,8 +165,8 @@ function _slicing(context: vscode.ExtensionContext) {
                             }
                         }
                     );
-                    const response = res.getBody() + "";
-                    console.log(response);
+                    const response = JSON.parse(res.getBody() + "");
+                    console.log(response.data);
                     return;
             }
         },
