@@ -46,6 +46,14 @@ function _slicing() {
             retainContextWhenHidden: true // Might be expensive
         } // Webview options. More on these later.
     );
+
+    var res = request('POST', 'http://localhost:8002/slice',
+        {
+            json: {}
+        }
+    );
+    const response = res.getBody() + "";
+    console.log(response);
 }
 
 function _perfProfiles(context: vscode.ExtensionContext) {
