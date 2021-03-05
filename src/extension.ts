@@ -196,7 +196,7 @@ function _slicing(context: vscode.ExtensionContext) {
 
         let ranges: vscode.Range[] = [];
         for (const lineNumber of lines.values()) {
-            if(+lineNumber <= 0) {
+            if (+lineNumber <= 0) {
                 continue;
             }
             const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
@@ -208,6 +208,7 @@ function _slicing(context: vscode.ExtensionContext) {
 }
 
 function setFilesToHighlight(data: any[]) {
+    filesToHighlight.clear();
     data.forEach(function (entry) {
         filesToHighlight.set(entry.file, entry.lines)
     });
