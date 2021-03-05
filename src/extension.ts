@@ -166,7 +166,9 @@ function _slicing(context: vscode.ExtensionContext) {
                         {
                             json: {
                                 sourceClass: sourceClass,
+                                sourceLines: Array.from(sources.values()),
                                 targetClass: targetClass,
+                                targetLines: target,
                             }
                         }
                     );
