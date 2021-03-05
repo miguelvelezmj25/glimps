@@ -13,6 +13,9 @@ let sources = new Set<Number>();
 let targetClass = "";
 let target: number = -1;
 
+const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(160,255,200,0.2)'});
+let filesToHighlight = new Map<String, Set<String>>();
+
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
 // this method is called when your extension is activated
@@ -37,6 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
+    if (style !== undefined) {
+        style.dispose();
+    }
 }
 
 function selectForSlice(workspaceFolders: ReadonlyArray<WorkspaceFolder>) {
@@ -66,7 +72,6 @@ function selectForSlice(workspaceFolders: ReadonlyArray<WorkspaceFolder>) {
 }
 
 function _sliceTarget(context: vscode.ExtensionContext) {
-    console.log("Implement selecting slice target");
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
@@ -166,13 +171,44 @@ function _slicing(context: vscode.ExtensionContext) {
                         }
                     );
                     const response = JSON.parse(res.getBody() + "");
-                    console.log(response.data);
+                    setFilesToHighlight(response.data);
                     return;
             }
         },
         undefined,
         context.subscriptions
     );
+
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+        if (!vscode.window.activeTextEditor) {
+            return;
+        }
+
+        let editorPath = vscode.window.activeTextEditor.document.uri.path;
+        editorPath = editorPath.replace(workspaceFolders[0].uri.path, "");
+        editorPath = editorPath.replace("/src/main/java/", "");
+        const lines = filesToHighlight.get(editorPath);
+        if (!lines || lines.size === 0) {
+            return;
+        }
+
+        let ranges: vscode.Range[] = [];
+        for (const lineNumber of lines.values()) {
+            if(+lineNumber <= 0) {
+                continue;
+            }
+            const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
+            ranges.push(line.range);
+        }
+        vscode.window.activeTextEditor.setDecorations(style, ranges);
+
+    }, null, context.subscriptions);
+}
+
+function setFilesToHighlight(data: any[]) {
+    data.forEach(function (entry) {
+        filesToHighlight.set(entry.file, entry.lines)
+    });
 }
 
 function getSliceInfo(dataDir: string) {
@@ -210,6 +246,7 @@ function getSlicingContent() {
         </div>
         <br>
         <div><button id="slice-trigger">Slice</button> <button id="clear-trigger">Clear</button></div>
+        <div>TODO USE JAVASCRIPT LIBRARY TO SHOW GRAPH OF SLICE BETWEEN METHODS</div>
         <script type="text/javascript">                                                   
             (function () {
                 const vscode = acquireVsCodeApi();
