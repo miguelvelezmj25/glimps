@@ -551,16 +551,23 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
                         title: "Performance Model",
                         columns: [
                             { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
-                            { title: "Influence (s)",  field: "influence",  sorter: "string", align:"right" },
+                            { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
                         ],
                     },
                 ],
             });
             
+            function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
+                let one = a.replace("+","");
+                one = one.replace("-","");
+                let two = b.replace("+","");
+                two = two.replace("-","");
+                return (+one) - (+two);
+            }
+            
             function customFormatter(cell, formatterParams, onRendered) {
                 const val = cell.getValue();
                 const entries = val.split(",");
-                console.log(entries);
                 const cellDiv = document.createElement('div');
                 for (let i = 0; i < entries.length; i++){
                     const valItemDiv = document.createElement('div');
