@@ -11,6 +11,7 @@
     "Research prototype"
   ],
   "activationEvents": [
+    "onCommand:defaultConfig.start",
     "onCommand:globalModel.start",
     "onCommand:localModels.start",
     "onCommand:perfProfiles.start",
@@ -21,6 +22,11 @@
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "defaultConfig.start",
+        "title": "Display the default configuration",
+        "category": "Perf Debug"
+      },
       {
         "command": "globalModel.start",
         "title": "Display global performance model",

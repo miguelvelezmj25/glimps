@@ -28,13 +28,14 @@ export function activate(context: vscode.ExtensionContext) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
+    const defaultConfig = vscode.commands.registerCommand('defaultConfig.start', _defaultConfig);
     const globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicingSource = vscode.commands.registerCommand('sliceSource.start', () => _sliceSource(context));
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', () => _sliceTarget(context));
     const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
-    context.subscriptions.push(globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
+    context.subscriptions.push(defaultConfig, globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
 }
 
 // this method is called when your extension is deactivated
@@ -43,6 +44,63 @@ export function deactivate() {
     if (style !== undefined) {
         style.dispose();
     }
+}
+
+function _defaultConfig() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        deactivate();
+        return;
+    }
+
+    // Create and show a new webview
+    const panel = vscode.window.createWebviewPanel(
+        'defaultConfig', // Identifies the type of the webview. Used internally
+        'Default Configuration', // Title of the panel displayed to the user
+        vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
+        {
+            enableScripts: true,
+            retainContextWhenHidden: true // Might be expensive
+        } // Webview options. More on these later.
+    );
+
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'default.csv'), 'utf8'));
+    panel.webview.html = getDefaultConfigContent(defaultConfig);
+}
+
+function getDefaultConfigContent(rawDefaultConfig: string[]) {
+    const defaultConfig = getDefaultConfig(rawDefaultConfig);
+
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tabulator Example</title>
+        <link href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/tabulator_simple.min.css" rel="stylesheet">
+        <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
+    </head>
+    <body>
+        <div id="defaultConfig"></div>
+        <script type="text/javascript">                   
+            const defaultConfigData = [${defaultConfig}];        
+            const defaultConfigTable = new Tabulator("#defaultConfig", {
+                data: defaultConfigData,
+                layout: "fitColumns",
+                columns: [
+                    {
+                        title: "Default Configuration",
+                        columns: [
+                            { title: "Option", field: "option", sorter: "string" }, 
+                            { title: "Value",  field: "value",  sorter: "string" }
+                        ],
+                    },
+                ],
+            });
+        </script>
+    </body>
+    </html>`;
 }
 
 function selectForSlice(workspaceFolders: ReadonlyArray<WorkspaceFolder>) {
@@ -507,7 +565,6 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
 }
 
 function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime: string, rawPerfModel: string[]) {
-    // const defaultConfig = getDefaultConfig(rawDefaultConfig);
     const perfModel = getPerfModel(rawPerfModel);
 
     return `<!DOCTYPE html>
