@@ -550,13 +550,25 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
                     {
                         title: "Performance Model",
                         columns: [
-                            { title: "Option", field: "option", sorter: "string" }, 
-                            { title: "Value",  field: "value",  sorter: "string" },
-                            { title: "Execution Time (s)",  field: "time",  sorter: "number", hozAlign:"right" }
+                            { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
+                            { title: "Influence (s)",  field: "influence",  sorter: "string", align:"right" },
                         ],
                     },
                 ],
             });
+            
+            function customFormatter(cell, formatterParams, onRendered) {
+                const val = cell.getValue();
+                const entries = val.split(",");
+                console.log(entries);
+                const cellDiv = document.createElement('div');
+                for (let i = 0; i < entries.length; i++){
+                    const valItemDiv = document.createElement('div');
+                    valItemDiv.textContent = entries[i];
+                    cellDiv.appendChild(valItemDiv);
+                }
+                return cellDiv;
+            }
         </script>
     </body>
     </html>`;
@@ -579,11 +591,9 @@ function getPerfModel(rawPerfModel: string[]) {
     rawPerfModel.forEach((entry) => {
         result = result.concat("{ option: \"");
         result = result.concat(entry[0]);
-        result = result.concat("\", value: \"");
+        result = result.concat("\", influence: \"");
         result = result.concat(entry[1]);
-        result = result.concat("\", time: ");
-        result = result.concat(entry[2]);
-        result = result.concat(" }, ");
+        result = result.concat("\" }, ");
     });
     return result;
 }
