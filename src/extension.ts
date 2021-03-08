@@ -507,7 +507,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
 }
 
 function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime: string, rawPerfModel: string[]) {
-    const defaultConfig = getDefaultConfig(rawDefaultConfig);
+    // const defaultConfig = getDefaultConfig(rawDefaultConfig);
     const perfModel = getPerfModel(rawPerfModel);
 
     return `<!DOCTYPE html>
@@ -520,25 +520,14 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div id="defaultConfig"></div>
-        <script type="text/javascript">                   
-            const defaultConfigData = [${defaultConfig}];        
-            const defaultConfigTable = new Tabulator("#defaultConfig", {
-                data: defaultConfigData,
-                layout: "fitColumns",
-                columns: [
-                    {
-                        title: "Default Configuration",
-                        columns: [
-                            { title: "Option", field: "option", sorter: "string" }, 
-                            { title: "Value",  field: "value",  sorter: "string" }
-                        ],
-                    },
-                ],
-            });
-        </script>
-        <br>
         <div id="defaultExecutionTime">Default execution time: ${defaultExecutionTime}</div>
+        <br>
+        <div>
+            <button id="configure">Configure</button>
+            <button id="deselect-all">Deselect All</button>
+        </div>
+        <br>
+        <div id="selected-config-time">Selected configuration time:</div>
         <br>
         <div id="perfModel"></div>
         <script type="text/javascript">     
@@ -546,17 +535,61 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
             const perfModelTable = new Tabulator("#perfModel", {
                 data: perfModelData,
                 layout: "fitColumns",
+                selectable:true,
                 columns: [
-                    {
-                        title: "Performance Model",
-                        columns: [
-                            { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
-                            { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
-                        ],
-                    },
+                    { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
+                    { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
                 ],
             });
             
+            document.getElementById("deselect-all").addEventListener("click", function(){
+                perfModelTable.deselectRow();
+            });
+            
+            document.getElementById("configure").addEventListener("click", function(){
+                let selectedRows = perfModelTable.getRows().filter(row => row.isSelected());
+                const selectedOptions = new Set();
+                selectedRows.forEach(row => {
+                    row.getData().option.split(",").forEach(entry => {
+                       selectedOptions.add(entry.split(" ")[0]); 
+                    });
+                });
+                                
+                const rowsToSelect = perfModelTable.getRows().filter(row => {
+                    const options = new Set(); 
+                    row.getData().option.split(",").forEach(entry => {
+                        options.add(entry.split(" ")[0]);
+                    })
+                    return subset(options, selectedOptions);
+                });
+                rowsToSelect.forEach(row => row.select());
+                
+                selectedRows = perfModelTable.getRows().filter(row => row.isSelected());
+                let time = +document.getElementById("defaultExecutionTime").textContent.split(" ")[3];
+                selectedRows.forEach(row => {
+                    let influenceStr = row.getData().influence;
+                    let influence = influenceStr.replace("+","");
+                    influence = +influence.replace("-","");
+                    console.log(influence);
+                    if(influenceStr.includes('+')) {
+                        time += influence;
+                    }
+                    else {
+                        time -= influence;
+                    }
+                });
+                document.getElementById("selected-config-time").innerHTML = "Selected configuration time: " + Math.max(0, time).toFixed(2) + " seconds";
+            });
+            
+            function subset(subset, set) {
+                for(let elem of subset) {
+                    if(!set.has(elem)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+                           
             function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
                 let one = a.replace("+","");
                 one = one.replace("-","");
