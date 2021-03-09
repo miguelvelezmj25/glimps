@@ -197,13 +197,20 @@ function _slicing(context: vscode.ExtensionContext) {
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const sliceInfo = getSliceInfo(dataDir);
-    const programName = sliceInfo.programName;
     const port = sliceInfo.port;
+
+    const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
 
     // Handle messages from the webview
     slicingPanel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
+                case 'link':
+                    let uri = vscode.Uri.file(filesRoot + 'edu/cmu/cs/mvelezce/perf/debug/config/core/Main.java');
+                    vscode.workspace.openTextDocument(uri).then(doc => {
+                        vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+                    });
+                    return;
                 case 'clear':
                     if (!slicingPanel) {
                         return;
@@ -268,7 +275,7 @@ function _slicing(context: vscode.ExtensionContext) {
 function setFilesToHighlight(data: any[]) {
     filesToHighlight.clear();
     data.forEach(function (entry) {
-        filesToHighlight.set(entry.file, entry.lines)
+        filesToHighlight.set(entry.file, entry.lines);
     });
 }
 
@@ -301,16 +308,38 @@ function getSlicingContent() {
         <title>Program Slicing</title>
     </head>
     <body>
+        <script src="https://d3js.org/d3.v5.min.js"></script>
+        <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
+        <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
         <div>
             Sources: ${sourceList} 
             Targets: ${targetList} 
         </div>
         <br>
         <div><button id="slice-trigger">Slice</button> <button id="clear-trigger">Clear</button></div>
-        <div>TODO USE JAVASCRIPT LIBRARY TO SHOW GRAPH OF SLICE BETWEEN METHODS</div>
-        <script type="text/javascript">                                                   
+        <br>
+        <br>
+        <div id="graph"></div>
+        <script type="text/javascript">                                                           
             (function () {
                 const vscode = acquireVsCodeApi();
+                
+                d3.select("#graph").graphviz()
+                    .renderDot('digraph  {main -> foo}')
+                    .on("end", interactive);
+                
+                function interactive() {
+                    const nodes = d3.selectAll('.node');
+                    console.log(nodes);
+                    nodes.on("click", function () {
+                            const title = d3.select(this).selectAll('title').text().trim();
+                            const text = d3.select(this).selectAll('text').text();
+                            console.log('Element title="%s" text="%s"', title, text);
+                            vscode.postMessage({
+                                command: 'link'
+                            });
+                    });
+                }
                 
                 document.getElementById("clear-trigger").addEventListener("click", function () {                    
                     vscode.postMessage({
