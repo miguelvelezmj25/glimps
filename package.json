@@ -11,7 +11,7 @@
     "Research prototype"
   ],
   "activationEvents": [
-    "onCommand:defaultConfig.start",
+    "onCommand:configDialog.start",
     "onCommand:globalModel.start",
     "onCommand:localModels.start",
     "onCommand:perfProfiles.start",
@@ -23,8 +23,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "defaultConfig.start",
-        "title": "Display the default configuration",
+        "command": "configDialog.start",
+        "title": "Configuration dialog",
         "category": "Perf Debug"
       },
       {

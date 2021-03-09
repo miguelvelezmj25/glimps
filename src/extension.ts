@@ -28,14 +28,14 @@ export function activate(context: vscode.ExtensionContext) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
-    const defaultConfig = vscode.commands.registerCommand('defaultConfig.start', _defaultConfig);
+    const configDialog = vscode.commands.registerCommand('configDialog.start', () => _configDialog(context));
     const globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicingSource = vscode.commands.registerCommand('sliceSource.start', () => _sliceSource(context));
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', () => _sliceTarget(context));
     const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
-    context.subscriptions.push(defaultConfig, globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
+    context.subscriptions.push(configDialog, globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
 }
 
 // this method is called when your extension is deactivated
@@ -46,7 +46,7 @@ export function deactivate() {
     }
 }
 
-function _defaultConfig() {
+function _configDialog(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
@@ -55,8 +55,8 @@ function _defaultConfig() {
 
     // Create and show a new webview
     const panel = vscode.window.createWebviewPanel(
-        'defaultConfig', // Identifies the type of the webview. Used internally
-        'Default Configuration', // Title of the panel displayed to the user
+        'configDialog', // Identifies the type of the webview. Used internally
+        'Configuration Dialog', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -65,12 +65,34 @@ function _defaultConfig() {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'default.csv'), 'utf8'));
-    panel.webview.html = getDefaultConfigContent(defaultConfig);
+    const configs = ["default", "user"];
+    panel.webview.html = getConfigDialogContent([], configs);
+
+    panel.webview.onDidReceiveMessage(
+        message => {
+            switch (message.command) {
+                case 'display' :
+                    const config = message.config;
+                    const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
+                    panel.webview.html = getConfigDialogContent(configData, configs);
+                    return;
+            }
+        },
+        undefined,
+        context.subscriptions
+    );
 }
 
-function getDefaultConfigContent(rawDefaultConfig: string[]) {
-    const defaultConfig = getDefaultConfig(rawDefaultConfig);
+function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
+    const config = getConfig(rawConfig);
+    let configs = "";
+    for (const config of rawConfigs) {
+        configs = configs.concat("<option value=\"");
+        configs = configs.concat(config);
+        configs = configs.concat("\">");
+        configs = configs.concat(config);
+        configs = configs.concat("</option>");
+    }
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -82,22 +104,38 @@ function getDefaultConfigContent(rawDefaultConfig: string[]) {
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div id="defaultConfig"></div>
+        <div style="display: inline;">Select configuration:</div>
+        <div style="display: inline;">
+            <select name="configSelect" id="configSelect">
+                ${configs}
+            </select>
+        </div>
+        <div style="display: inline;"><button id="display-config-trigger">Display Configuration</button></div>
+        <br>
+        <br>
+        <div id="displayConfig"></div>
         <script type="text/javascript">                   
-            const defaultConfigData = [${defaultConfig}];        
-            const defaultConfigTable = new Tabulator("#defaultConfig", {
-                data: defaultConfigData,
+            const configData = [${config}];        
+            const configTable = new Tabulator("#displayConfig", {
+                data: configData,
                 layout: "fitColumns",
                 columns: [
-                    {
-                        title: "Default Configuration",
-                        columns: [
-                            { title: "Option", field: "option", sorter: "string" }, 
-                            { title: "Value",  field: "value",  sorter: "string" }
-                        ],
-                    },
+                    { title: "Option", field: "option", sorter: "string" }, 
+                    { title: "Value",  field: "value",  sorter: "string" }
                 ],
             });
+            
+            (function () {
+                const vscode = acquireVsCodeApi();
+                
+                document.getElementById("display-config-trigger").addEventListener("click", function () {                    
+                    const config = document.getElementById("configSelect").value;                 
+                    vscode.postMessage({
+                        command: 'display',
+                        config: config
+                    });
+                });
+            }())
         </script>
     </body>
     </html>`;
@@ -729,7 +767,7 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
     </html>`;
 }
 
-function getDefaultConfig(rawDefaultConfig: string[]) {
+function getConfig(rawDefaultConfig: string[]) {
     let result = "";
     rawDefaultConfig.forEach((entry) => {
         result = result.concat("{ option: \"");
