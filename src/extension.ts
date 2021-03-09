@@ -352,6 +352,8 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     const configs = getConfigs(dataDir);
     configs.sort();
     const options = getOptions(configs);
+    const sliceInfo = getSliceInfo(dataDir);
+    const programName = sliceInfo.programName;
 
     panel.webview.html = getHotspotDiffContent(options, "Config1", "Config2", "{}");
 
@@ -365,18 +367,14 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     var res = request('POST', 'http://localhost:8001/diff',
                         {
                             json: {
-                                programName: "Convert",
-                                config1: "REPORT",
-                                // config1: config1,
-                                config2: "SKIP_UPSCALING"
-                                // config2: config2
+                                programName: programName,
+                                config1: config1,
+                                config2: config2
                             }
                         }
                     );
                     const response = res.getBody() + "";
-                    const x = getHotspotDiffContent(options, config1, config2, response);
-                    console.log(x);
-                    panel.webview.html = x;
+                    panel.webview.html = getHotspotDiffContent(options, config1, config2, response);
                     return;
             }
         },
@@ -398,6 +396,9 @@ function getOptions(configs: string[]) {
 }
 
 function getHotspotDiffContent(options: string, config1: string, config2: string, hotspotDiffData: string) {
+    const diffTimeBg: string = "#a0dff3";
+    const diffPathBg: string = "#f9d6b6";
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -419,6 +420,10 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
         </div>
         <div><button id="hotspot-diff-trigger">Compare Hotspots</button></div>
         <br>
+        <div style="padding: 2px; display: inline-block; background-color: ${diffTimeBg}; color: black">Entries with this background color indicate that the execution time is significantly different across configurations.</div> 
+        <div style="padding: 2px; display: inline-block; background-color: ${diffPathBg}; color: black">Entries with this background color indicate that hotspot path was not executed under one configuration.</div> 
+        <br>
+        <br>
         <div id="hotspot-diff-table"></div>
         <script type="text/javascript">                                       
             const hotspotDiffData = [${hotspotDiffData}];      
@@ -426,13 +431,30 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
                 data: hotspotDiffData,
                 dataTree:true,
                 dataTreeStartExpanded:false,
-                layout: "fitColumns",
+                rowFormatter: customRowFormatter,
                 columns: [
                     {title: "Hot Spot", field: "method", sorter: "string"},
                     {title: "${config1}", field: "config1", sorter: "number", hozAlign: "right"},
                     {title: "${config2}", field: "config2", sorter: "number", hozAlign: "right"}
                 ],
             }); 
+            
+            function customRowFormatter(row) {
+                const rowData = row.getData();
+                const config1 = rowData.config1;
+                const config2 = rowData.config2;
+                
+                if(config1 === "X"){
+                    row.getElement().style.backgroundColor = "#f9d6b6";
+                }
+                else if(config2 === "X"){
+                    row.getElement().style.backgroundColor = "#f9d6b6";
+                }
+                
+                if(Math.abs((+config1) - (+config2)) > 1.0){
+                    row.getElement().style.backgroundColor = "#a0dff3";
+                } 
+            }       
             
             (function () {
                 const vscode = acquireVsCodeApi();

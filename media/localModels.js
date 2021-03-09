@@ -47,7 +47,7 @@
                 const options = new Set();
                 row.getData().option.split(",").forEach(entry => {
                     options.add(entry.split(" ")[0]);
-                })
+                });
                 return subset(options, selectedOptions);
             });
             rowsToSelect.forEach(row => row.select());
