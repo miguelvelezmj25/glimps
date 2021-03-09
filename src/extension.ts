@@ -552,11 +552,19 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
             <label for="methodSelect">Select a method to display its performance model:</label>
             <select name="methodSelect" id="methodSelect"></select>     
         </div>
+        <br>
         <div><button id="local-model-trigger">Get Performance Model</button></div>
         <br>
         <div id="methodName"></div>
         <br>
         <div id="defaultExecutionTime"></div>
+        <br>
+        <div>
+            <button id="configure">Configure</button>
+            <button id="deselect-all">Deselect All</button>
+        </div>
+        <br>
+        <div id="selected-config-time">Selected configuration time:</div>
         <br>
         <div id="local-model-table"></div>
         <script src="${localModelsScript}"></script>
@@ -627,7 +635,6 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
                     let influenceStr = row.getData().influence;
                     let influence = influenceStr.replace("+","");
                     influence = +influence.replace("-","");
-                    console.log(influence);
                     if(influenceStr.includes('+')) {
                         time += influence;
                     }
