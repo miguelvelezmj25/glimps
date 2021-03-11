@@ -17,6 +17,7 @@ const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDec
 let filesToHighlight = new Map<String, Set<String>>();
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
+let profilePanel: vscode.WebviewPanel | undefined = undefined;
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
 // this method is called when your extension is activated
@@ -85,6 +86,13 @@ function _configDialog(context: vscode.ExtensionContext) {
                         vscode.commands.executeCommand('globalModel.start');
                     }
                     return;
+                case 'profile' :
+                    if (profilePanel) {
+                        profilePanel.reveal();
+                    } else {
+                        vscode.commands.executeCommand('perfProfiles.start');
+                    }
+                    return;
             }
         },
         undefined,
@@ -136,7 +144,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         <div id="displayConfig"></div>
         <br>
         <div style="display: inline;"><button id="global-influence-trigger">View Global Performance Influence</button></div>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration (TODO link)</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration</button></div>
         <br>
         <br>
         <br>
@@ -178,6 +186,12 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
                 document.getElementById("global-influence-trigger").addEventListener("click", function () {    
                     vscode.postMessage({
                         command: 'globalInfluence'
+                    });
+                });
+                
+                document.getElementById("profile-config-trigger").addEventListener("click", function () {    
+                    vscode.postMessage({
+                        command: 'profile'
                     });
                 });
             }())
@@ -450,7 +464,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     }
 
     // Create and show a new webview
-    const panel = vscode.window.createWebviewPanel(
+    profilePanel = vscode.window.createWebviewPanel(
         'perfProfiles', // Identifies the type of the webview. Used internally
         'Hotspot Profile', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
@@ -464,13 +478,16 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     const sliceInfo = getSliceInfo(dataDir);
     const programName = sliceInfo.programName;
     let allConfigs = getAllConfigs(dataDir);
-    panel.webview.html = getHotspotDiffContent(allConfigs, "Config1", "Config2", "{}");
+    profilePanel.webview.html = getHotspotDiffContent(allConfigs, "Config1", "Config2", "{}");
 
     // Handle messages from the webview
-    panel.webview.onDidReceiveMessage(
+    profilePanel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
                 case 'diff' :
+                    if (!profilePanel) {
+                        return;
+                    }
                     const config1 = message.configs[0];
                     const config2 = message.configs[1] ? message.configs[1] : message.configs[0];
                     var res = request('POST', 'http://localhost:8001/diff',
@@ -484,7 +501,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     );
                     const response = res.getBody() + "";
                     allConfigs = getAllConfigs(dataDir);
-                    panel.webview.html = getHotspotDiffContent(allConfigs, config1, config2, response);
+                    profilePanel.webview.html = getHotspotDiffContent(allConfigs, config1, config2, response);
                     return;
             }
         },
@@ -696,6 +713,13 @@ function _globalModel(context: vscode.ExtensionContext) {
                     allConfigs = getAllConfigs(dataDir);
                     globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
                     return;
+                case 'profile' :
+                    if (profilePanel) {
+                        profilePanel.reveal();
+                    } else {
+                        vscode.commands.executeCommand('perfProfiles.start');
+                    }
+                    return;
             }
         },
         undefined,
@@ -782,7 +806,7 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <br>
         <div id="perfModel"></div>
         <br>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration (TODO link)</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration</button></div>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence (TODO link DISABLE IF NOTHING IS SELECTED)</button></div>
         <script type="text/javascript">
             (function () {    
@@ -876,6 +900,12 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                     }
                     return cellDiv;
                 }
+                
+                document.getElementById("profile-config-trigger").addEventListener("click", function () {    
+                    vscode.postMessage({
+                        command: 'profile'
+                    });
+                });
             }())
         </script>
     </body>
