@@ -747,6 +747,9 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <div id="defaultExecutionTime">Default execution time: ${defaultExecutionTime}</div>
         <br>
         <div id="perfModel"></div>
+        <br>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration (TODO link)</button></div>
+        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence (TODO link DISABLE IF NOTHING IS SELECTED)</button></div>
         <script type="text/javascript">
             (function () {    
                 const perfModelData = [${perfModel}];        
@@ -796,6 +799,9 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                    if(!selectedRows.includes(row)) {
                        row.delete();
                    } 
+                });
+                perfModelTable.getRows().forEach(row => {
+                   row.deselect();
                 });
             
                 const vscode = acquireVsCodeApi();
