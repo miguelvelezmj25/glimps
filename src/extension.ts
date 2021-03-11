@@ -69,7 +69,7 @@ function _configDialog(context: vscode.ExtensionContext) {
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     let allConfigs = getAllConfigs(dataDir);
-    panel.webview.html = getConfigDialogContent([], allConfigs);
+    panel.webview.html = getConfigDialogContent([], allConfigs, 'default');
 
     panel.webview.onDidReceiveMessage(
         message => {
@@ -78,7 +78,7 @@ function _configDialog(context: vscode.ExtensionContext) {
                     const config = message.config;
                     const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
                     allConfigs = getAllConfigs(dataDir);
-                    panel.webview.html = getConfigDialogContent(configData, allConfigs);
+                    panel.webview.html = getConfigDialogContent(configData, allConfigs, config);
                     return;
                 case 'globalInfluence' :
                     if (globalModelPanel) {
@@ -112,7 +112,7 @@ function getAllConfigs(dataDir: string) {
     return configs;
 }
 
-function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
+function getConfigDialogContent(rawConfig: string[], rawConfigs: string[], rawSelectedConfigName: string) {
     const config = getConfig(rawConfig);
     let configs = "";
     for (const config of rawConfigs) {
@@ -141,8 +141,14 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         </div>
         <div style="display: inline;"><button id="display-config-trigger">Display Configuration</button></div>
         <br>
+        <hr>
+        <br>
+        <br>
+        <div id="selected-config-name"><b>Selected configuration:</b> ${rawSelectedConfigName}</div>
         <br>
         <div id="displayConfig"></div>
+        <br>
+        <hr>
         <br>
         <div style="display: inline;"><button id="global-influence-trigger">View Global Performance Influence</button></div>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
@@ -150,7 +156,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         <br>
         <br>
         <br>
-        <div">Save new configuration: TODO use custom picker for values, add textbox to name the config, add button to save config, refresh view when saving configu</div>
+<!--        <div">Save new configuration: TODO use custom picker for values, add textbox to name the config, add button to save config, refresh view when saving configu</div>-->
         <br>
         <div id="saveConfig"></div>
         <script type="text/javascript">                   
@@ -164,14 +170,14 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
                 ],
             });
                  
-            const saveConfigTable = new Tabulator("#saveConfig", {
-                data: configData,
-                layout: "fitColumns",
-                columns: [
-                    { title: "Option", field: "option", sorter: "string" }, 
-                    { title: "Value",  field: "value",  sorter: "string", editor:"select", editorParams:{values:{"male":"Male", "female":"Female", "unknown":"Unknown"}} }
-                ],
-            });
+            // const saveConfigTable = new Tabulator("#saveConfig", {
+            //     data: configData,
+            //     layout: "fitColumns",
+            //     columns: [
+            //         { title: "Option", field: "option", sorter: "string" }, 
+            //         { title: "Value",  field: "value",  sorter: "string", editor:"select", editorParams:{values:{"male":"Male", "female":"Female", "unknown":"Unknown"}} }
+            //     ],
+            // });
             
             (function () {
                 const vscode = acquireVsCodeApi();
@@ -416,6 +422,7 @@ function getSlicingContent() {
         <br>
         <div><button id="slice-trigger">Trace</button> <button id="clear-trigger">Clear</button></div>
         <br>
+        <hr>
         <br>
         <div id="graph"></div>
         <script type="text/javascript">                                                           
@@ -566,8 +573,12 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         </div>
         <div style="display: inline"><button id="hotspot-trigger">View Hotspots</button></div>
         <br>
+        <hr>
+        <br>
         <br>
         <div id="hotspot-diff-table"></div>
+        <br>
+        <hr>
         <br>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
         <script type="text/javascript">                                       
@@ -839,6 +850,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         </div>
         <div style="display: inline;"><button id="view-influence-trigger">View Influence</button></div>
         <br>
+        <hr>
         <br>
         <br>
         <div id="methodName">&nbsp;</div>
@@ -848,6 +860,8 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         <div id="defaultExecutionTime">&nbsp;</div>
         <br>
         <div id="local-model-table"></div>
+        <br>
+        <hr>
         <br>
         <div style="display: inline;"><button id="slice-trigger">Slice Options</button></div>
         <script src="${localModelsScript}"></script>
@@ -886,6 +900,7 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         </div>
         <div style="display: inline;"><button id="view-influence-trigger">View Influence</button></div>
         <br>
+        <hr>
         <br>
         <br>
         <div style="display: inline;"id="selected-config-name"><b>Selected configuration:</b> default</div>
@@ -894,6 +909,8 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <div id="defaultExecutionTime"><b>Default execution time:</b> ${defaultExecutionTime}</div>
         <br>
         <div id="perfModel"></div>
+        <br>
+        <hr>
         <br>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
