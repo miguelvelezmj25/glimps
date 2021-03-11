@@ -23,6 +23,12 @@
             ],
         });
 
+        document.getElementById("slice-trigger").addEventListener("click", function () {
+            acquireVsCodeApi().postMessage({
+                command: 'slice'
+            });
+        });
+
         //trigger AJAX load on "Load Data via AJAX" button click
         document.getElementById("view-influence-trigger").addEventListener("click", function () {
             const selectedMethod = document.getElementById("methodSelect").value;

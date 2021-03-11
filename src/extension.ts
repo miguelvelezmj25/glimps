@@ -13,7 +13,7 @@ let sources = new Set<Number>();
 let targetClass = "";
 let target: number = -1;
 
-const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(160,255,200,0.2)'});
+const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let filesToHighlight = new Map<String, Set<String>>();
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
@@ -684,6 +684,23 @@ function _localModels(context: vscode.ExtensionContext) {
     const allConfigs = getAllConfigs(dataDir);
     localModelPanel.webview.html = getLocalModelsContent(context, localModelPanel, allConfigs);
 
+    // Handle messages from the webview
+    localModelPanel.webview.onDidReceiveMessage(
+        message => {
+            switch (message.command) {
+                case 'slice' :
+                    if (slicingPanel) {
+                        slicingPanel.reveal();
+                    } else {
+                        vscode.commands.executeCommand('slicing.start');
+                    }
+                    return;
+            }
+        },
+        undefined,
+        context.subscriptions
+    );
+
     localModelPanel.onDidDispose(
         () => {
             localModelPanel = undefined;
@@ -831,6 +848,8 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         <div id="defaultExecutionTime">&nbsp;</div>
         <br>
         <div id="local-model-table"></div>
+        <br>
+        <div style="display: inline;"><button id="slice-trigger">Slice Options</button></div>
         <script src="${localModelsScript}"></script>
     </body>
     </html>`;
