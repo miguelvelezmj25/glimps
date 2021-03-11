@@ -39,7 +39,7 @@
       },
       {
         "command": "perfProfiles.start",
-        "title": "Compare hotspot profiles",
+        "title": "View Hotspot Profiles",
         "category": "Perf Debug"
       },
       {

@@ -452,7 +452,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     // Create and show a new webview
     const panel = vscode.window.createWebviewPanel(
         'perfProfiles', // Identifies the type of the webview. Used internally
-        'Hotspot Diff', // Title of the panel displayed to the user
+        'Hotspot Profile', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -461,21 +461,18 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const configs = getConfigs(dataDir);
-    configs.sort();
-    const options = getOptions(configs);
     const sliceInfo = getSliceInfo(dataDir);
     const programName = sliceInfo.programName;
-
-    panel.webview.html = getHotspotDiffContent(options, "Config1", "Config2", "{}");
+    let allConfigs = getAllConfigs(dataDir);
+    panel.webview.html = getHotspotDiffContent(allConfigs, "Config1", "Config2", "{}");
 
     // Handle messages from the webview
     panel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
                 case 'diff' :
-                    const config1 = message.config1;
-                    const config2 = message.config2;
+                    const config1 = message.configs[0];
+                    const config2 = message.configs[1] ? message.configs[1] : message.configs[0];
                     var res = request('POST', 'http://localhost:8001/diff',
                         {
                             json: {
@@ -486,7 +483,8 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                         }
                     );
                     const response = res.getBody() + "";
-                    panel.webview.html = getHotspotDiffContent(options, config1, config2, response);
+                    allConfigs = getAllConfigs(dataDir);
+                    panel.webview.html = getHotspotDiffContent(allConfigs, config1, config2, response);
                     return;
             }
         },
@@ -507,9 +505,18 @@ function getOptions(configs: string[]) {
     return options;
 }
 
-function getHotspotDiffContent(options: string, config1: string, config2: string, hotspotDiffData: string) {
+function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: string, hotspotDiffData: string) {
     const diffTimeBg: string = "#a0dff3";
     const diffPathBg: string = "#f9d6b6";
+
+    let configs = "";
+    for (const config of rawConfigs) {
+        configs = configs.concat("<option value=\"");
+        configs = configs.concat(config);
+        configs = configs.concat("\">");
+        configs = configs.concat(config);
+        configs = configs.concat("</option>");
+    }
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -521,16 +528,13 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div>Select two configurations to compare their hotspot views:</div>
-        <div>    
-            <select name="configSelect1" id="configSelect1">
-                ${options}
+        <div>Select configurations to view their hotspot:</div>
+        <div style="display: inline">
+            <select name="config-select" id="config-select" size='2' multiple="multiple">
+                ${configs}
             </select>
-            <select name="configSelect2" id="configSelect2">
-                ${options}
-            </select>     
         </div>
-        <div><button id="hotspot-diff-trigger">Compare Hotspots</button></div>
+        <div style="display: inline"><button id="hotspot-trigger">View Hotspots</button></div>
         <br>
         <div style="padding: 2px; display: inline-block; background-color: ${diffTimeBg}; color: black">Entries with this background color indicate that the execution time is significantly different across configurations.</div> 
         <div style="padding: 2px; display: inline-block; background-color: ${diffPathBg}; color: black">Entries with this background color indicate that hotspot path was not executed under one configuration.</div> 
@@ -543,6 +547,7 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
                 data: hotspotDiffData,
                 dataTree:true,
                 dataTreeStartExpanded:false,
+                movableColumns: true, 
                 rowFormatter: customRowFormatter,
                 columns: [
                     {title: "Hot Spot", field: "method", sorter: "string"},
@@ -550,6 +555,14 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
                     {title: "${config2}", field: "config2", sorter: "number", hozAlign: "right"}
                 ],
             }); 
+            
+            if(table.getColumn("config1").getDefinition().title === "Config1" || table.getColumn("config2").getDefinition().title === "Config2") {
+                table.getColumn("config1").delete();
+                table.getColumn("config2").delete();
+            }
+            else if(table.getColumn("config1").getDefinition().title === table.getColumn("config2").getDefinition().title) {
+                table.getColumn("config2").delete();
+            }
             
             function customRowFormatter(row) {
                 const rowData = row.getData();
@@ -571,14 +584,19 @@ function getHotspotDiffContent(options: string, config1: string, config2: string
             (function () {
                 const vscode = acquireVsCodeApi();
                 
-                document.getElementById("hotspot-diff-trigger").addEventListener("click", function () {                    
-                    const config1 = document.getElementById("configSelect1").value;
-                    const config2 = document.getElementById("configSelect2").value;
-                                     
+                document.getElementById("hotspot-trigger").addEventListener("click", function () {
+                    const configs = [];
+                    for (const option of document.getElementById('config-select').options) {
+                        if (option.selected) {
+                            configs.push(option.value);
+                        }
+                    }
+                    if(configs.length === 0) {
+                        return;
+                    }
                     vscode.postMessage({
                         command: 'diff',
-                        config1: config1,
-                        config2: config2
+                        configs: configs
                     });
                 });
             }())
