@@ -65,7 +65,7 @@ function _configDialog(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const configs = ["default", "user"];
+    let configs = getAllConfigs(dataDir);
     panel.webview.html = getConfigDialogContent([], configs);
 
     panel.webview.onDidReceiveMessage(
@@ -74,6 +74,7 @@ function _configDialog(context: vscode.ExtensionContext) {
                 case 'display' :
                     const config = message.config;
                     const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
+                    let configs = getAllConfigs(dataDir);
                     panel.webview.html = getConfigDialogContent(configData, configs);
                     return;
             }
@@ -81,6 +82,17 @@ function _configDialog(context: vscode.ExtensionContext) {
         undefined,
         context.subscriptions
     );
+}
+
+function getAllConfigs(dataDir: string) {
+    let configs: string[] = [];
+    fs.readdirSync(path.join(dataDir, 'configs/')).forEach(fileName => {
+        if (fileName.endsWith('.csv')) {
+            fileName = fileName.replace(".csv", "");
+            configs.push(fileName);
+        }
+    });
+    return configs;
 }
 
 function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
@@ -114,6 +126,16 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         <br>
         <br>
         <div id="displayConfig"></div>
+        <br>
+        <div style="display: inline;"><button id="profile-config-trigger">View Performance Influence (TODO link)</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration (TODO link)</button></div>
+        <br>
+        <br>
+        <br>
+        <br>
+        <div">Save new configuration: TODO use custom picker for values, add textbox to name the config, add button to save config, refresh view when saving configu</div>
+        <br>
+        <div id="saveConfig"></div>
         <script type="text/javascript">                   
             const configData = [${config}];        
             const configTable = new Tabulator("#displayConfig", {
@@ -122,6 +144,15 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
                 columns: [
                     { title: "Option", field: "option", sorter: "string" }, 
                     { title: "Value",  field: "value",  sorter: "string" }
+                ],
+            });
+                 
+            const saveConfigTable = new Tabulator("#saveConfig", {
+                data: configData,
+                layout: "fitColumns",
+                columns: [
+                    { title: "Option", field: "option", sorter: "string" }, 
+                    { title: "Value",  field: "value",  sorter: "string", editor:"select", editorParams:{values:{"male":"Male", "female":"Female", "unknown":"Unknown"}} }
                 ],
             });
             
@@ -674,6 +705,13 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
+        <div style="display: inline;">Select configuration:</div>
+        <div style="display: inline;">
+            <select name="configSelect" id="configSelect">
+               
+            </select>
+        </div>
+        <div style="display: inline;"><button id="display-config-trigger">Display Configuration</button></div>
         <div id="defaultExecutionTime">Default execution time: ${defaultExecutionTime}</div>
         <br>
         <div>
