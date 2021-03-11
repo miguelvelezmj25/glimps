@@ -16,6 +16,7 @@ let target: number = -1;
 const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(160,255,200,0.2)'});
 let filesToHighlight = new Map<String, Set<String>>();
 
+let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
 // this method is called when your extension is activated
@@ -77,6 +78,13 @@ function _configDialog(context: vscode.ExtensionContext) {
                     allConfigs = getAllConfigs(dataDir);
                     panel.webview.html = getConfigDialogContent(configData, allConfigs);
                     return;
+                case 'globalInfluence' :
+                    if (globalModelPanel) {
+                        globalModelPanel.reveal();
+                    } else {
+                        vscode.commands.executeCommand('globalModel.start');
+                    }
+                    return;
             }
         },
         undefined,
@@ -127,7 +135,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         <br>
         <div id="displayConfig"></div>
         <br>
-        <div style="display: inline;"><button id="profile-config-trigger">View Global Performance Influence (TODO link)</button></div>
+        <div style="display: inline;"><button id="global-influence-trigger">View Global Performance Influence</button></div>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration (TODO link)</button></div>
         <br>
         <br>
@@ -164,6 +172,12 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
                     vscode.postMessage({
                         command: 'display',
                         config: config
+                    });
+                });
+                
+                document.getElementById("global-influence-trigger").addEventListener("click", function () {    
+                    vscode.postMessage({
+                        command: 'globalInfluence'
                     });
                 });
             }())
@@ -636,7 +650,7 @@ function _globalModel(context: vscode.ExtensionContext) {
     }
 
     // Create and show a new webview
-    const panel = vscode.window.createWebviewPanel(
+    globalModelPanel = vscode.window.createWebviewPanel(
         'globalModel', // Identifies the type of the webview. Used internally
         'Global Performance Influence', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
@@ -651,16 +665,19 @@ function _globalModel(context: vscode.ExtensionContext) {
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
     let allConfigs = getAllConfigs(dataDir);
-    panel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, defaultConfig, 'default');
+    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, defaultConfig, 'default');
 
-    panel.webview.onDidReceiveMessage(
+    globalModelPanel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
                 case 'viewGlobalInfluence' :
+                    if (!globalModelPanel) {
+                        return;
+                    }
                     const config = message.config;
                     const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
                     allConfigs = getAllConfigs(dataDir);
-                    panel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
+                    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
                     return;
             }
         },

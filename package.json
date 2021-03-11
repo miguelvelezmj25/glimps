@@ -24,7 +24,7 @@
     "commands": [
       {
         "command": "configDialog.start",
-        "title": "Configuration dialog",
+        "title": "Configuration Dialog",
         "category": "Perf Debug"
       },
       {
