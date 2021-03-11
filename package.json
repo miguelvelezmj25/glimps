@@ -39,7 +39,7 @@
       },
       {
         "command": "perfProfiles.start",
-        "title": "View Hotspot Profiles",
+        "title": "Profile Configurations | Hotspot View",
         "category": "Perf Debug"
       },
       {

@@ -144,7 +144,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         <div id="displayConfig"></div>
         <br>
         <div style="display: inline;"><button id="global-influence-trigger">View Global Performance Influence</button></div>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <br>
         <br>
         <br>
@@ -466,7 +466,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     // Create and show a new webview
     profilePanel = vscode.window.createWebviewPanel(
         'perfProfiles', // Identifies the type of the webview. Used internally
-        'Hotspot Profile', // Title of the panel displayed to the user
+        'Hotspot View', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -806,7 +806,7 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <br>
         <div id="perfModel"></div>
         <br>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence (TODO link DISABLE IF NOTHING IS SELECTED)</button></div>
         <script type="text/javascript">
             (function () {    
