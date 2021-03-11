@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
     const configDialog = vscode.commands.registerCommand('configDialog.start', () => _configDialog(context));
-    const globalModel = vscode.commands.registerCommand('globalModel.start', _globalModel);
+    const globalModel = vscode.commands.registerCommand('globalModel.start', () => _globalModel(context));
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicingSource = vscode.commands.registerCommand('sliceSource.start', () => _sliceSource(context));
@@ -65,8 +65,8 @@ function _configDialog(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    let configs = getAllConfigs(dataDir);
-    panel.webview.html = getConfigDialogContent([], configs);
+    let allConfigs = getAllConfigs(dataDir);
+    panel.webview.html = getConfigDialogContent([], allConfigs);
 
     panel.webview.onDidReceiveMessage(
         message => {
@@ -74,8 +74,8 @@ function _configDialog(context: vscode.ExtensionContext) {
                 case 'display' :
                     const config = message.config;
                     const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
-                    let configs = getAllConfigs(dataDir);
-                    panel.webview.html = getConfigDialogContent(configData, configs);
+                    allConfigs = getAllConfigs(dataDir);
+                    panel.webview.html = getConfigDialogContent(configData, allConfigs);
                     return;
             }
         },
@@ -127,7 +127,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         <br>
         <div id="displayConfig"></div>
         <br>
-        <div style="display: inline;"><button id="profile-config-trigger">View Performance Influence (TODO link)</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">View Global Performance Influence (TODO link)</button></div>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configuration (TODO link)</button></div>
         <br>
         <br>
@@ -628,7 +628,7 @@ function getMethods2Models(dataDir: string) {
     return method2Models;
 }
 
-function _globalModel() {
+function _globalModel(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
@@ -638,7 +638,7 @@ function _globalModel() {
     // Create and show a new webview
     const panel = vscode.window.createWebviewPanel(
         'globalModel', // Identifies the type of the webview. Used internally
-        'Global Performance Model', // Title of the panel displayed to the user
+        'Global Performance Influence', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -647,10 +647,26 @@ function _globalModel() {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'default.csv'), 'utf8'));
+    const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'configs/default.csv'), 'utf8'));
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
-    panel.webview.html = getGlobalModelContent(defaultConfig, defaultExecutionTime, perfModel);
+    let allConfigs = getAllConfigs(dataDir);
+    panel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, defaultConfig, 'default');
+
+    panel.webview.onDidReceiveMessage(
+        message => {
+            switch (message.command) {
+                case 'viewGlobalInfluence' :
+                    const config = message.config;
+                    const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
+                    allConfigs = getAllConfigs(dataDir);
+                    panel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
+                    return;
+            }
+        },
+        undefined,
+        context.subscriptions
+    );
 }
 
 function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
@@ -692,8 +708,18 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
     </html>`;
 }
 
-function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime: string, rawPerfModel: string[]) {
+function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: string[], rawConfigs: string[], defaultConfig: string[], rawConfig: string[], rawSelectedConfigName: string) {
+    const selectedConfigName = "{ name: \"" + rawSelectedConfigName + "\" }";
     const perfModel = getPerfModel(rawPerfModel);
+    const selectedConfig = getSelectedConfig(defaultConfig, rawConfig);
+    let configs = "";
+    for (const config of rawConfigs) {
+        configs = configs.concat("<option value=\"");
+        configs = configs.concat(config);
+        configs = configs.concat("\">");
+        configs = configs.concat(config);
+        configs = configs.concat("</option>");
+    }
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -708,55 +734,49 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
         <div style="display: inline;">Select configuration:</div>
         <div style="display: inline;">
             <select name="configSelect" id="configSelect">
-               
+                ${configs}
             </select>
         </div>
-        <div style="display: inline;"><button id="display-config-trigger">Display Configuration</button></div>
+        <div style="display: inline;"><button id="view-influence-trigger">View Influence</button></div>
+        <br>
+        <br>
+        <br>
+        <div style="display: inline;"id="selected-config-name">Selected configuration: default</div>
+        <div id="selected-config-time">Execution time:</div>
+        <br>
         <div id="defaultExecutionTime">Default execution time: ${defaultExecutionTime}</div>
         <br>
-        <div>
-            <button id="configure">Configure</button>
-            <button id="deselect-all">Deselect All</button>
-        </div>
-        <br>
-        <div id="selected-config-time">Selected configuration time:</div>
-        <br>
         <div id="perfModel"></div>
-        <script type="text/javascript">     
-            const perfModelData = [${perfModel}];        
-            const perfModelTable = new Tabulator("#perfModel", {
-                data: perfModelData,
-                layout: "fitColumns",
-                selectable:true,
-                columns: [
-                    { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
-                    { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
-                ],
-            });
-            
-            document.getElementById("deselect-all").addEventListener("click", function(){
-                perfModelTable.deselectRow();
-            });
-            
-            document.getElementById("configure").addEventListener("click", function(){
-                let selectedRows = perfModelTable.getRows().filter(row => row.isSelected());
-                const selectedOptions = new Set();
-                selectedRows.forEach(row => {
-                    row.getData().option.split(",").forEach(entry => {
-                       selectedOptions.add(entry.split(" ")[0]); 
-                    });
+        <script type="text/javascript">
+            (function () {    
+                const perfModelData = [${perfModel}];        
+                const perfModelTable = new Tabulator("#perfModel", {
+                    data: perfModelData,
+                    layout: "fitColumns",
+                    columns: [
+                        { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
+                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                    ],
                 });
-                                
-                const rowsToSelect = perfModelTable.getRows().filter(row => {
-                    const options = new Set(); 
-                    row.getData().option.split(",").forEach(entry => {
-                        options.add(entry.split(" ")[0]);
-                    })
-                    return subset(options, selectedOptions);
-                });
-                rowsToSelect.forEach(row => row.select());
                 
-                selectedRows = perfModelTable.getRows().filter(row => row.isSelected());
+                const optionsToSelect = [${selectedConfig}];
+                if(optionsToSelect.length > 0) {
+                    const selectedOptions = new Set();
+                    optionsToSelect.forEach(entry => {
+                        selectedOptions.add(entry.option);
+                    });
+                                    
+                    const rowsToSelect = perfModelTable.getRows().filter(row => {
+                        const options = new Set(); 
+                        row.getData().option.split(",").forEach(entry => {
+                            options.add(entry.split(" ")[0]);
+                        })
+                        return subset(options, selectedOptions);
+                    });
+                    rowsToSelect.forEach(row => row.select());
+                }
+                
+                const selectedRows = perfModelTable.getRows().filter(row => row.isSelected());              
                 let time = +document.getElementById("defaultExecutionTime").textContent.split(" ")[3];
                 selectedRows.forEach(row => {
                     let influenceStr = row.getData().influence;
@@ -769,37 +789,54 @@ function getGlobalModelContent(rawDefaultConfig: string[], defaultExecutionTime:
                         time -= influence;
                     }
                 });
-                document.getElementById("selected-config-time").innerHTML = "Selected configuration time: " + Math.max(0, time).toFixed(2) + " seconds";
-            });
+                document.getElementById("selected-config-name").innerHTML = "Selected configuration: " + ${selectedConfigName}.name;
+                document.getElementById("selected-config-time").innerHTML = "Execution time: " + Math.max(0, time).toFixed(2) + " seconds";
+                
+                perfModelTable.getRows().forEach(row => {
+                   if(!selectedRows.includes(row)) {
+                       row.delete();
+                   } 
+                });
             
-            function subset(subset, set) {
-                for(let elem of subset) {
-                    if(!set.has(elem)) {
-                        return false;
+                const vscode = acquireVsCodeApi();
+            
+                document.getElementById("view-influence-trigger").addEventListener("click", function(){
+                    const config = document.getElementById("configSelect").value;                 
+                    vscode.postMessage({
+                        command: 'viewGlobalInfluence',
+                        config: config
+                    });
+                });
+                
+                function subset(subset, set) {
+                    for(let elem of subset) {
+                        if(!set.has(elem)) {
+                            return false;
+                        }
                     }
+                    return true;
                 }
-                return true;
-            }
-                           
-            function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
-                let one = a.replace("+","");
-                one = one.replace("-","");
-                let two = b.replace("+","");
-                two = two.replace("-","");
-                return (+one) - (+two);
-            }
-            
-            function customFormatter(cell, formatterParams, onRendered) {
-                const val = cell.getValue();
-                const entries = val.split(",");
-                const cellDiv = document.createElement('div');
-                for (let i = 0; i < entries.length; i++){
-                    const valItemDiv = document.createElement('div');
-                    valItemDiv.textContent = entries[i];
-                    cellDiv.appendChild(valItemDiv);
+                               
+                function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
+                    let one = a.replace("+","");
+                    one = one.replace("-","");
+                    let two = b.replace("+","");
+                    two = two.replace("-","");
+                    return (+one) - (+two);
                 }
-                return cellDiv;
-            }
+                
+                function customFormatter(cell, formatterParams, onRendered) {
+                    const val = cell.getValue();
+                    const entries = val.split(",");
+                    const cellDiv = document.createElement('div');
+                    for (let i = 0; i < entries.length; i++){
+                        const valItemDiv = document.createElement('div');
+                        valItemDiv.textContent = entries[i];
+                        cellDiv.appendChild(valItemDiv);
+                    }
+                    return cellDiv;
+                }
+            }())
         </script>
     </body>
     </html>`;
@@ -824,6 +861,32 @@ function getPerfModel(rawPerfModel: string[]) {
         result = result.concat(entry[0]);
         result = result.concat("\", influence: \"");
         result = result.concat(entry[1]);
+        result = result.concat("\" }, ");
+    });
+    return result;
+}
+
+function getSelectedConfig(defaultConfig: string[], rawConfig: string[]) {
+    let selected: string[] = [];
+    rawConfig.forEach((entry) => {
+        const option = entry[0];
+        defaultConfig.forEach((defaultEntry) => {
+            if (option === defaultEntry[0]) {
+                if (entry[1] !== defaultEntry[1]) {
+                    selected.push(option);
+                }
+            }
+        });
+    });
+
+    if (selected.length === 0) {
+        return "";
+    }
+
+    let result = "";
+    selected.forEach((entry) => {
+        result = result.concat("{ option: \"");
+        result = result.concat(entry);
         result = result.concat("\" }, ");
     });
     return result;

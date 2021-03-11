@@ -29,7 +29,7 @@
       },
       {
         "command": "globalModel.start",
-        "title": "Display global performance model",
+        "title": "View Global Performance Influence",
         "category": "Perf Debug"
       },
       {
