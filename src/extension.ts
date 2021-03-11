@@ -17,6 +17,7 @@ const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDec
 let filesToHighlight = new Map<String, Set<String>>();
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
+let localModelPanel: vscode.WebviewPanel | undefined = undefined;
 let profilePanel: vscode.WebviewPanel | undefined = undefined;
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
@@ -503,9 +504,24 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     allConfigs = getAllConfigs(dataDir);
                     profilePanel.webview.html = getHotspotDiffContent(allConfigs, config1, config2, response);
                     return;
+                case 'localInfluence' :
+                    if (localModelPanel) {
+                        localModelPanel.reveal();
+                    } else {
+                        vscode.commands.executeCommand('localModels.start');
+                    }
+                    return;
             }
         },
         undefined,
+        context.subscriptions
+    );
+
+    profilePanel.onDidDispose(
+        () => {
+            profilePanel = undefined;
+        },
+        null,
         context.subscriptions
     );
 }
@@ -553,7 +569,7 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         <br>
         <div id="hotspot-diff-table"></div>
         <br>
-        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence (TODO link DISABLE IF NOTHING IS SELECTED)</button></div>
+        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
         <script type="text/javascript">                                       
             const hotspotDiffData = [${hotspotDiffData}];      
             const table = new Tabulator("#hotspot-diff-table", {
@@ -602,6 +618,12 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
             (function () {
                 const vscode = acquireVsCodeApi();
                 
+                document.getElementById("local-influence-trigger").addEventListener("click", function () {    
+                    vscode.postMessage({
+                        command: 'localInfluence'
+                    });
+                });
+                
                 document.getElementById("hotspot-trigger").addEventListener("click", function () {
                     const configs = [];
                     for (const option of document.getElementById('config-select').options) {
@@ -639,7 +661,7 @@ function _localModels(context: vscode.ExtensionContext) {
     }
 
     // Create and show a new webview
-    const panel = vscode.window.createWebviewPanel(
+    localModelPanel = vscode.window.createWebviewPanel(
         'localModels', // Identifies the type of the webview. Used internally
         'Local Performance Influence', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
@@ -653,14 +675,22 @@ function _localModels(context: vscode.ExtensionContext) {
     const methodBasicInfo = getMethodsInfo(dataDir);
     const methods2Models = getMethods2Models(dataDir);
     const names2Configs = getNames2Configs(dataDir);
-    panel.webview.postMessage({
+    localModelPanel.webview.postMessage({
         methodBasicInfo: methodBasicInfo,
         methods2Models: methods2Models,
         names2Configs: names2Configs
     });
 
     const allConfigs = getAllConfigs(dataDir);
-    panel.webview.html = getLocalModelsContent(context, panel, allConfigs);
+    localModelPanel.webview.html = getLocalModelsContent(context, localModelPanel, allConfigs);
+
+    localModelPanel.onDidDispose(
+        () => {
+            localModelPanel = undefined;
+        },
+        null,
+        context.subscriptions
+    );
 }
 
 function getMethodsInfo(dataDir: string) {
@@ -735,9 +765,25 @@ function _globalModel(context: vscode.ExtensionContext) {
                         vscode.commands.executeCommand('perfProfiles.start');
                     }
                     return;
+                case 'localInfluence' :
+                    console.log(localModelPanel);
+                    if (localModelPanel) {
+                        localModelPanel.reveal();
+                    } else {
+                        vscode.commands.executeCommand('localModels.start');
+                    }
+                    return;
             }
         },
         undefined,
+        context.subscriptions
+    );
+
+    globalModelPanel.onDidDispose(
+        () => {
+            globalModelPanel = undefined;
+        },
+        null,
         context.subscriptions
     );
 }
@@ -831,7 +877,7 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <div id="perfModel"></div>
         <br>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
-        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence (TODO link DISABLE IF NOTHING IS SELECTED)</button></div>
+        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
         <script type="text/javascript">
             (function () {    
                 const perfModelData = [${perfModel}];        
@@ -928,6 +974,12 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                 document.getElementById("profile-config-trigger").addEventListener("click", function () {    
                     vscode.postMessage({
                         command: 'profile'
+                    });
+                });
+                
+                document.getElementById("local-influence-trigger").addEventListener("click", function () {    
+                    vscode.postMessage({
+                        command: 'localInfluence'
                     });
                 });
             }())
