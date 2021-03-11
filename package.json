@@ -34,7 +34,7 @@
       },
       {
         "command": "localModels.start",
-        "title": "Display local performance models",
+        "title": "View Local Performance Influence",
         "category": "Perf Debug"
       },
       {

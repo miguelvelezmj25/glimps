@@ -2,6 +2,8 @@
     // Handle the message inside the webview
     window.addEventListener('message', event => {
         const methods2DefaultExecutionTimes = getMethods(event.data);
+        const methods2Models = getMethods2Models(event.data);
+        const names2Configs = getNames2Configs(event.data);
 
         const methodSelect = document.getElementById("methodSelect");
         for (const key of methods2DefaultExecutionTimes.keys()) {
@@ -13,47 +15,44 @@
 
         const table = new Tabulator("#local-model-table", {
             layout: "fitColumns",
-            placeholder: "Awaiting Data, Please Load File",
-            selectable: true,
+            // placeholder: "Awaiting Data, Please Load File",
+            // selectable: true,
             columns: [
                 {title: "Option", field: "option", sorter: "string", formatter: customFormatter},
                 {title: "Influence (s)", field: "influence", sorter: influenceSort, hozAlign: "right"},
             ],
         });
 
-        let methods2Models = getMethods2Models(event.data);
         //trigger AJAX load on "Load Data via AJAX" button click
-        document.getElementById("local-model-trigger").addEventListener("click", function () {
+        document.getElementById("view-influence-trigger").addEventListener("click", function () {
             const selectedMethod = document.getElementById("methodSelect").value;
-            document.getElementById("methodName").textContent = "Method Selected: " + selectedMethod;
-            document.getElementById("defaultExecutionTime").textContent = "Default execution time: " + methods2DefaultExecutionTimes.get(selectedMethod);
-            table.setData(methods2Models.get(selectedMethod));
-        });
+            const selectedConfig = document.getElementById("configSelect").value;
+            document.getElementById("methodName").innerHTML = "<b>Selected method:</b> " + selectedMethod;
+            document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + selectedConfig;
+            document.getElementById("defaultExecutionTime").innerHTML = "<b>Default execution time:</b> " + methods2DefaultExecutionTimes.get(selectedMethod);
 
-        document.getElementById("deselect-all").addEventListener("click", function () {
-            table.deselectRow();
-        });
+            const optionsToSelect = getSelectedConfig(names2Configs.get('default'), names2Configs.get(selectedConfig));
+            const model = methods2Models.get(selectedMethod);
+            table.setData(model);
 
-        document.getElementById("configure").addEventListener("click", function () {
-            let selectedRows = table.getRows().filter(row => row.isSelected());
-            const selectedOptions = new Set();
-            selectedRows.forEach(row => {
-                row.getData().option.split(",").forEach(entry => {
-                    selectedOptions.add(entry.split(" ")[0]);
+            if (optionsToSelect.length > 0) {
+                const selectedOptions = new Set();
+                optionsToSelect.forEach(entry => {
+                    selectedOptions.add(entry);
                 });
-            });
 
-            const rowsToSelect = table.getRows().filter(row => {
-                const options = new Set();
-                row.getData().option.split(",").forEach(entry => {
-                    options.add(entry.split(" ")[0]);
+                const rowsToSelect = table.getRows().filter(row => {
+                    const options = new Set();
+                    row.getData().option.split(",").forEach(entry => {
+                        options.add(entry.split(" ")[0]);
+                    });
+                    return subset(options, selectedOptions);
                 });
-                return subset(options, selectedOptions);
-            });
-            rowsToSelect.forEach(row => row.select());
+                rowsToSelect.forEach(row => row.select());
+            }
 
-            selectedRows = table.getRows().filter(row => row.isSelected());
             let time = +document.getElementById("defaultExecutionTime").textContent.split(" ")[3];
+            const selectedRows = table.getRows().filter(row => row.isSelected());
             selectedRows.forEach(row => {
                 let influenceStr = row.getData().influence;
                 let influence = influenceStr.replace("+", "");
@@ -64,9 +63,32 @@
                     time -= influence;
                 }
             });
-            document.getElementById("selected-config-time").innerHTML = "Selected configuration time: " + Math.max(0, time).toFixed(2) + " seconds";
+            document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
+
+            table.getRows().forEach(row => {
+                if (!selectedRows.includes(row)) {
+                    row.delete();
+                }
+            });
+            table.getRows().forEach(row => {
+                row.deselect();
+            });
         });
 
+        function getSelectedConfig(defaultConfig, rawConfig) {
+            let selected = [];
+            rawConfig.forEach((entry) => {
+                const option = entry[0];
+                defaultConfig.forEach((defaultEntry) => {
+                    if (option === defaultEntry[0]) {
+                        if (entry[1] !== defaultEntry[1]) {
+                            selected.push(option);
+                        }
+                    }
+                });
+            });
+            return selected;
+        }
     });
 }());
 
@@ -115,6 +137,15 @@ function getMethods2Models(data) {
         methods2Models.set(dataMethodsToModels[i].method, getPerfModel(dataMethodsToModels[i].model));
     }
     return methods2Models;
+}
+
+function getNames2Configs(data) {
+    const dataNames2Configs = data.names2Configs;
+    let names2Configs = new Map();
+    for (let i = 0; i < dataNames2Configs.length; i++) {
+        names2Configs.set(dataNames2Configs[i].config, dataNames2Configs[i].value);
+    }
+    return names2Configs;
 }
 
 function getPerfModel(rawPerfModel) {

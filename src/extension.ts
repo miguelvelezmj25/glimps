@@ -552,6 +552,8 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         <br>
         <br>
         <div id="hotspot-diff-table"></div>
+        <br>
+        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence (TODO link DISABLE IF NOTHING IS SELECTED)</button></div>
         <script type="text/javascript">                                       
             const hotspotDiffData = [${hotspotDiffData}];      
             const table = new Tabulator("#hotspot-diff-table", {
@@ -639,7 +641,7 @@ function _localModels(context: vscode.ExtensionContext) {
     // Create and show a new webview
     const panel = vscode.window.createWebviewPanel(
         'localModels', // Identifies the type of the webview. Used internally
-        'Local Performance Models', // Title of the panel displayed to the user
+        'Local Performance Influence', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -649,13 +651,16 @@ function _localModels(context: vscode.ExtensionContext) {
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const methodBasicInfo = getMethodsInfo(dataDir);
-    methodBasicInfo.sort((a, b) => (a.reportTime > b.reportTime) ? -1 : 1);
     const methods2Models = getMethods2Models(dataDir);
+    const names2Configs = getNames2Configs(dataDir);
     panel.webview.postMessage({
         methodBasicInfo: methodBasicInfo,
-        methods2Models: methods2Models
+        methods2Models: methods2Models,
+        names2Configs: names2Configs
     });
-    panel.webview.html = getLocalModelsContent(context, panel);
+
+    const allConfigs = getAllConfigs(dataDir);
+    panel.webview.html = getLocalModelsContent(context, panel, allConfigs);
 }
 
 function getMethodsInfo(dataDir: string) {
@@ -664,6 +669,16 @@ function getMethodsInfo(dataDir: string) {
         basicMethodInfo.push({method: entry[0], defaultExecutionTime: entry[1], reportTime: +entry[2]});
     });
     return basicMethodInfo;
+}
+
+function getNames2Configs(dataDir: string) {
+    let names2Configs: any[] = [];
+    fs.readdirSync(path.join(dataDir, 'configs')).forEach(file => {
+        const config = path.parse(file).name;
+        const value = parse(fs.readFileSync(path.join(dataDir, 'configs/' + file), 'utf8'))
+        names2Configs.push({config: config, value: value});
+    });
+    return names2Configs;
 }
 
 function getMethods2Models(dataDir: string) {
@@ -727,9 +742,17 @@ function _globalModel(context: vscode.ExtensionContext) {
     );
 }
 
-function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
+function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, rawConfigs: string[]) {
     const localModelsScriptPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'localModels.js'));
     const localModelsScript = panel.webview.asWebviewUri(localModelsScriptPath);
+    let configs = "";
+    for (const config of rawConfigs) {
+        configs = configs.concat("<option value=\"");
+        configs = configs.concat(config);
+        configs = configs.concat("\">");
+        configs = configs.concat(config);
+        configs = configs.concat("</option>");
+    }
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -741,24 +764,25 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div>Methods are sorted by their execution time when running the user's configuration.</div>
         <div>
-            <label for="methodSelect">Select a method to display its performance model:</label>
+            <label for="methodSelect"><b>Select method:</b></label>
             <select name="methodSelect" id="methodSelect"></select>     
         </div>
-        <br>
-        <div><button id="local-model-trigger">Get Performance Model</button></div>
-        <br>
-        <div id="methodName"></div>
-        <br>
-        <div id="defaultExecutionTime"></div>
-        <br>
-        <div>
-            <button id="configure">Configure</button>
-            <button id="deselect-all">Deselect All</button>
+        <div style="display: inline;"><b>Select configuration:</b></div>
+        <div style="display: inline;">
+            <select name="configSelect" id="configSelect">
+                ${configs}
+            </select>
         </div>
+        <div style="display: inline;"><button id="view-influence-trigger">View Influence</button></div>
         <br>
-        <div id="selected-config-time">Selected configuration time:</div>
+        <br>
+        <br>
+        <div id="methodName">&nbsp;</div>
+        <div id="selected-config-name">&nbsp;</div>
+        <div id="selected-config-time">&nbsp;</div>
+        <br>
+        <div id="defaultExecutionTime">&nbsp;</div>
         <br>
         <div id="local-model-table"></div>
         <script src="${localModelsScript}"></script>
@@ -799,7 +823,7 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <br>
         <br>
         <br>
-        <div style="display: inline;"id="selected-config-name">Selected configuration: default</div>
+        <div style="display: inline;"id="selected-config-name"><b>Selected configuration:</b> default</div>
         <div id="selected-config-time">Execution time:</div>
         <br>
         <div id="defaultExecutionTime">Default execution time: ${defaultExecutionTime}</div>
@@ -837,8 +861,8 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                     rowsToSelect.forEach(row => row.select());
                 }
                 
-                const selectedRows = perfModelTable.getRows().filter(row => row.isSelected());              
                 let time = +document.getElementById("defaultExecutionTime").textContent.split(" ")[3];
+                const selectedRows = perfModelTable.getRows().filter(row => row.isSelected());              
                 selectedRows.forEach(row => {
                     let influenceStr = row.getData().influence;
                     let influence = influenceStr.replace("+","");
