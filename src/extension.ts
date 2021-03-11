@@ -506,9 +506,6 @@ function getOptions(configs: string[]) {
 }
 
 function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: string, hotspotDiffData: string) {
-    const diffTimeBg: string = "#a0dff3";
-    const diffPathBg: string = "#f9d6b6";
-
     let configs = "";
     for (const config of rawConfigs) {
         configs = configs.concat("<option value=\"");
@@ -535,9 +532,6 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
             </select>
         </div>
         <div style="display: inline"><button id="hotspot-trigger">View Hotspots</button></div>
-        <br>
-        <div style="padding: 2px; display: inline-block; background-color: ${diffTimeBg}; color: black">Entries with this background color indicate that the execution time is significantly different across configurations.</div> 
-        <div style="padding: 2px; display: inline-block; background-color: ${diffPathBg}; color: black">Entries with this background color indicate that hotspot path was not executed under one configuration.</div> 
         <br>
         <br>
         <div id="hotspot-diff-table"></div>
@@ -569,15 +563,20 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
                 const config1 = rowData.config1;
                 const config2 = rowData.config2;
                 
-                if(config1 === "X"){
-                    row.getElement().style.backgroundColor = "#f9d6b6";
-                }
-                else if(config2 === "X"){
-                    row.getElement().style.backgroundColor = "#f9d6b6";
+                if(config1 === "Not executed" || config2 === "Not executed"){
+                    for(let i = 1; i < row.getCells().length; i++) {
+                        row.getCells()[i].getElement().style.backgroundColor = "#fbf9f9";
+                        row.getCells()[i].getElement().style.color = "#990000";
+                        row.getCells()[i].getElement().style.fontWeight = "bold";
+                    }
                 }
                 
                 if(Math.abs((+config1) - (+config2)) > 1.0){
-                    row.getElement().style.backgroundColor = "#a0dff3";
+                    for(let i = 1; i < row.getCells().length; i++) {
+                        row.getCells()[i].getElement().style.backgroundColor = "#f9f9fb";
+                        row.getCells()[i].getElement().style.color = "#000066";
+                        row.getCells()[i].getElement().style.fontWeight = "bold";
+                    }
                 } 
             }       
             
