@@ -44,17 +44,17 @@
       },
       {
         "command": "slicing.start",
-        "title": "Slice options to hotspots",
+        "title": "Trace Options to Hotspots",
         "category": "Perf Debug"
       },
       {
         "command": "sliceSource.start",
-        "title": "Add slicing source",
+        "title": "Add Option for Tracing",
         "category": "Perf Debug"
       },
       {
         "command": "sliceTarget.start",
-        "title": "Add slicing target",
+        "title": "Add Hotspots for Tracing",
         "category": "Perf Debug"
       }
     ],

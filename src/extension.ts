@@ -133,7 +133,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[]) {
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div style="display: inline;">Select configuration:</div>
+        <div style="display: inline;"><b>Select configuration:</b></div>
         <div style="display: inline;">
             <select name="configSelect" id="configSelect">
                 ${configs}
@@ -283,7 +283,7 @@ function _slicing(context: vscode.ExtensionContext) {
     // Create and show a new webview
     slicingPanel = vscode.window.createWebviewPanel(
         'slicing', // Identifies the type of the webview. Used internally
-        'Program Slicing', // Title of the panel displayed to the user
+        'Option Tracing', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -384,7 +384,7 @@ function getSliceInfo(dataDir: string) {
 
 function getSlicingContent() {
     const sortedSources = Array.from(sources).sort((a, b) => (a > b) ? 1 : -1);
-    let sourceList = '<ul><li>Select sources</li></ul>';
+    let sourceList = '<ul><li>Select options</li></ul>';
     if (sources.size > 0) {
         sourceList = '';
         sortedSources.forEach(function (source) {
@@ -393,7 +393,7 @@ function getSlicingContent() {
         sourceList = '<ul>' + sourceList + '</ul>';
     }
 
-    let targetList = '<ul><li>Select a target</li></ul>';
+    let targetList = '<ul><li>Select a hotspot</li></ul>';
     if (target > 0) {
         targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
     }
@@ -410,11 +410,11 @@ function getSlicingContent() {
         <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
         <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
         <div>
-            Sources: ${sourceList} 
-            Targets: ${targetList} 
+            <b>Options:</b> ${sourceList} 
+            <b>Hotspot:</b> ${targetList} 
         </div>
         <br>
-        <div><button id="slice-trigger">Slice</button> <button id="clear-trigger">Clear</button></div>
+        <div><button id="slice-trigger">Trace</button> <button id="clear-trigger">Clear</button></div>
         <br>
         <br>
         <div id="graph"></div>
@@ -558,7 +558,7 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div>Select configurations to view their hotspot:</div>
+        <div ><b>Select configurations:</b></div>
         <div style="display: inline">
             <select name="config-select" id="config-select" size='2' multiple="multiple">
                 ${configs}
@@ -878,7 +878,7 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div style="display: inline;">Select configuration:</div>
+        <div style="display: inline;"><b>Select configuration:</b></div>
         <div style="display: inline;">
             <select name="configSelect" id="configSelect">
                 ${configs}
@@ -891,7 +891,7 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <div style="display: inline;"id="selected-config-name"><b>Selected configuration:</b> default</div>
         <div id="selected-config-time">Execution time:</div>
         <br>
-        <div id="defaultExecutionTime">Default execution time: ${defaultExecutionTime}</div>
+        <div id="defaultExecutionTime"><b>Default execution time:</b> ${defaultExecutionTime}</div>
         <br>
         <div id="perfModel"></div>
         <br>
@@ -939,8 +939,8 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                         time -= influence;
                     }
                 });
-                document.getElementById("selected-config-name").innerHTML = "Selected configuration: " + ${selectedConfigName}.name;
-                document.getElementById("selected-config-time").innerHTML = "Execution time: " + Math.max(0, time).toFixed(2) + " seconds";
+                document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + ${selectedConfigName}.name;
+                document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
                 
                 perfModelTable.getRows().forEach(row => {
                    if(!selectedRows.includes(row)) {
