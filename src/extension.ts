@@ -431,7 +431,7 @@ function getSlicingContent() {
         targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
     }
 
-    const graphData: string = '{ data: \"digraph {' + sliceConnections + '}\" }';
+    const graphData: string = '{ data: \"digraph { node [shape=box] ' + sliceConnections + '}\" }';
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -461,7 +461,7 @@ function getSlicingContent() {
                 const vscode = acquireVsCodeApi();
                 
                 const graphData = ${graphData}.data;
-                if(graphData.length > 10) { 
+                if(graphData.length > 28) { 
                     d3.select("#connection-graph").graphviz()
                         .renderDot(graphData)
                         .on("end", interactive);
@@ -828,7 +828,6 @@ function _globalModel(context: vscode.ExtensionContext) {
                     }
                     return;
                 case 'localInfluence' :
-                    console.log(localModelPanel);
                     if (localModelPanel) {
                         localModelPanel.reveal();
                     } else {
