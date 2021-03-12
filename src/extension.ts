@@ -15,6 +15,7 @@ let target: number = -1;
 
 const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let filesToHighlight = new Map<String, Set<String>>();
+let sliceConnections = '';
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
 let localModelPanel: vscode.WebviewPanel | undefined = undefined;
@@ -279,6 +280,26 @@ function _sliceSource(context: vscode.ExtensionContext) {
     }
 }
 
+function setSliceConnections(connections: any[]) {
+    let result = '';
+    connections.forEach(entry => {
+        let source = entry.source;
+        source = source.substring(0, source.indexOf("("));
+        let target = entry.target;
+        target = target.substring(0, target.indexOf("("));
+        result = result.concat('\\\"'
+            + source.substring(0, source.lastIndexOf("."))
+            + "\\n"
+            + source.substring(source.lastIndexOf(".") + 1)
+            + '\\\" -> \\\"'
+            + target.substring(0, target.lastIndexOf("."))
+            + "\\n"
+            + target.substring(target.lastIndexOf(".") + 1)
+            + '\\\" ');
+    });
+    sliceConnections = result;
+}
+
 function _slicing(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
@@ -324,11 +345,15 @@ function _slicing(context: vscode.ExtensionContext) {
                     sources = new Set<Number>();
                     targetClass = "";
                     target = -1;
+                    sliceConnections = '';
                     slicingPanel.webview.html = getSlicingContent();
                     return;
                 case 'slice':
+                    if (!slicingPanel) {
+                        return;
+                    }
                     if (sourceClass === "" || sources.size === 0 || targetClass === "" || target <= 0) {
-                        vscode.window.showErrorMessage("Select sources and targets to slice");
+                        vscode.window.showErrorMessage("Select options and hotspots for tracing");
                         return;
                     }
                     const res = request('POST', 'http://localhost:' + port + '/slice',
@@ -342,7 +367,9 @@ function _slicing(context: vscode.ExtensionContext) {
                         }
                     );
                     const response = JSON.parse(res.getBody() + "");
-                    setFilesToHighlight(response.data);
+                    setFilesToHighlight(response.slice);
+                    setSliceConnections(response.connections);
+                    slicingPanel.webview.html = getSlicingContent();
                     return;
             }
         },
@@ -404,6 +431,8 @@ function getSlicingContent() {
         targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
     }
 
+    const graphData: string = '{ data: \"digraph {' + sliceConnections + '}\" }';
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -424,14 +453,19 @@ function getSlicingContent() {
         <br>
         <hr>
         <br>
-        <div id="graph"></div>
+        <div><b>Paths from Options to the Hotspot:</b></div>
+        <br>
+        <div id="connection-graph"></div>
         <script type="text/javascript">                                                           
             (function () {
                 const vscode = acquireVsCodeApi();
                 
-                d3.select("#graph").graphviz()
-                    .renderDot('digraph  {main -> foo}')
-                    .on("end", interactive);
+                const graphData = ${graphData}.data;
+                if(graphData.length > 10) { 
+                    d3.select("#connection-graph").graphviz()
+                        .renderDot(graphData)
+                        .on("end", interactive);
+                }
                 
                 function interactive() {
                     const nodes = d3.selectAll('.node');

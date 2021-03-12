@@ -54,7 +54,7 @@
       },
       {
         "command": "sliceTarget.start",
-        "title": "Add Hotspots for Tracing",
+        "title": "Add Hotspot for Tracing",
         "category": "Perf Debug"
       }
     ],
