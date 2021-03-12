@@ -331,7 +331,9 @@ function _slicing(context: vscode.ExtensionContext) {
         message => {
             switch (message.command) {
                 case 'link':
-                    let uri = vscode.Uri.file(filesRoot + 'edu/cmu/cs/mvelezce/perf/debug/config/core/Main.java');
+                    const className = message.method.substring(0, message.method.indexOf('\n')).replaceAll('.', '/');
+                    const method = message.method.substring(message.method.indexOf('\n') + 1);
+                    let uri = vscode.Uri.file(filesRoot + className + '.java');
                     vscode.workspace.openTextDocument(uri).then(doc => {
                         vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
                     });
@@ -431,7 +433,7 @@ function getSlicingContent() {
         targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
     }
 
-    const graphData: string = '{ data: \"digraph { node [shape=box] ' + sliceConnections + '}\" }';
+    const graphData: string = '{ data: \"digraph { node [shape=box] concentrate=true ' + sliceConnections + '}\" }';
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -461,7 +463,7 @@ function getSlicingContent() {
                 const vscode = acquireVsCodeApi();
                 
                 const graphData = ${graphData}.data;
-                if(graphData.length > 28) { 
+                if(graphData.length > 45) { 
                     d3.select("#connection-graph").graphviz()
                         .renderDot(graphData)
                         .on("end", interactive);
@@ -469,14 +471,12 @@ function getSlicingContent() {
                 
                 function interactive() {
                     const nodes = d3.selectAll('.node');
-                    console.log(nodes);
                     nodes.on("click", function () {
-                            const title = d3.select(this).selectAll('title').text().trim();
-                            const text = d3.select(this).selectAll('text').text();
-                            console.log('Element title="%s" text="%s"', title, text);
-                            vscode.postMessage({
-                                command: 'link'
-                            });
+                        const title = d3.select(this).selectAll('title').text();
+                        vscode.postMessage({
+                            command: 'link',
+                            method: title
+                        });
                     });
                 }
                 
