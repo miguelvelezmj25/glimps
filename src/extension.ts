@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {WorkspaceFolder} from 'vscode';
+import {DocumentSymbol, Selection, SymbolKind, TextEditorRevealType, WorkspaceFolder} from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as parse from 'csv-parse/lib/sync';
@@ -335,7 +335,38 @@ function _slicing(context: vscode.ExtensionContext) {
                     const method = message.method.substring(message.method.indexOf('\n') + 1);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     vscode.workspace.openTextDocument(uri).then(doc => {
-                        vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+                        vscode.window.showTextDocument(doc, vscode.ViewColumn.One)
+                            .then(editor => {
+                                vscode.commands.executeCommand<DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', uri)
+                                    .then(syms => {
+                                        if (!syms || syms.length === 0) {
+                                            return;
+                                        }
+
+                                        let methods2Symbols = new Map<String, DocumentSymbol>();
+                                        for (const sym of syms) {
+                                            for (const child of sym.children) {
+                                                if (child.kind !== SymbolKind.Method && child.kind !== SymbolKind.Constructor) {
+                                                    continue;
+                                                }
+
+                                                let methodName = child.name;
+                                                methodName = methodName.substring(0, methodName.indexOf('('));
+                                                if (child.kind === SymbolKind.Constructor) {
+                                                    methodName = '<init>';
+                                                }
+                                                methods2Symbols.set(methodName, child);
+                                            }
+                                        }
+
+                                        const symbol = methods2Symbols.get(method);
+                                        if (!symbol) {
+                                            return;
+                                        }
+                                        editor.revealRange(symbol.range, TextEditorRevealType.Default);
+                                        editor.selection = new Selection(symbol.range.start, symbol.range.start);
+                                    });
+                            });
                     });
                     return;
                 case 'clear':
@@ -465,7 +496,7 @@ function getSlicingContent() {
                 const graphData = ${graphData}.data;
                 if(graphData.length > 45) { 
                     d3.select("#connection-graph").graphviz()
-                        .renderDot(graphData)
+                        .renderDot(graphData).zoom(false)
                         .on("end", interactive);
                 }
                 
