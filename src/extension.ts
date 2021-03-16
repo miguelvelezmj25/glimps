@@ -331,7 +331,8 @@ function _slicing(context: vscode.ExtensionContext) {
         message => {
             switch (message.command) {
                 case 'link':
-                    const className = message.method.substring(0, message.method.indexOf('\n')).replaceAll('.', '/');
+                    const regex = /\./g;
+                    const className = message.method.substring(0, message.method.indexOf('\n')).replace(regex, '/');
                     const method = message.method.substring(message.method.indexOf('\n') + 1);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     vscode.workspace.openTextDocument(uri).then(doc => {
@@ -464,7 +465,7 @@ function getSlicingContent() {
         targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
     }
 
-    const graphData: string = '{ data: \"digraph { node [shape=box] concentrate=true ' + sliceConnections + '}\" }';
+    const graphData: string = '{ data: \"digraph { node [shape=box fillcolor=white style=filled] concentrate=true ' + sliceConnections + '}\" }';
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -494,7 +495,7 @@ function getSlicingContent() {
                 const vscode = acquireVsCodeApi();
                 
                 const graphData = ${graphData}.data;
-                if(graphData.length > 45) { 
+                if(graphData.length > 74) { 
                     d3.select("#connection-graph").graphviz()
                         .renderDot(graphData).zoom(false)
                         .on("end", interactive);
@@ -509,6 +510,14 @@ function getSlicingContent() {
                             method: title
                         });
                     });
+                    nodes.on('mouseover', function() {
+                        d3.select(this).style("fill", "#c769ff");
+                        d3.select(this).style("text-decoration", "underline");
+                    })
+                    nodes.on('mouseout', function() {
+                        d3.select(this).style("fill", "black");
+                        d3.select(this).style("text-decoration", "");
+                    })
                 }
                 
                 document.getElementById("clear-trigger").addEventListener("click", function () {                    
@@ -927,7 +936,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         <br>
         <hr>
         <br>
-        <div style="display: inline;"><button id="slice-trigger">Slice Options</button></div>
+        <div style="display: inline;"><button id="slice-trigger">Trace Options</button></div>
         <script src="${localModelsScript}"></script>
     </body>
     </html>`;
