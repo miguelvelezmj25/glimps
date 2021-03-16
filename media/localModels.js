@@ -33,7 +33,7 @@
         document.getElementById("view-influence-trigger").addEventListener("click", function () {
             const selectedMethod = document.getElementById("methodSelect").value;
             const selectedConfig = document.getElementById("configSelect").value;
-            document.getElementById("methodName").innerHTML = "<b>Selected method:</b> " + selectedMethod;
+            document.getElementById("methodName").innerHTML = "<b>Selected method:</b> " + selectedMethod + "()";
             document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + selectedConfig;
             document.getElementById("defaultExecutionTime").innerHTML = "<b>Default execution time:</b> " + methods2DefaultExecutionTimes.get(selectedMethod);
 

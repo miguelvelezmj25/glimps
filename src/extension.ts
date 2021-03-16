@@ -145,7 +145,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[], rawSe
         <hr>
         <br>
         <br>
-        <div id="selected-config-name"><b>Selected configuration:</b> ${rawSelectedConfigName}</div>
+        <div id="selected-config-name" style="font-size: 14px;"><b>Selected configuration:</b> ${rawSelectedConfigName}</div>
         <br>
         <div id="displayConfig"></div>
         <br>
@@ -380,7 +380,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     targetClass = "";
                     target = -1;
                     sliceConnections = '';
-                    filesToHighlight = new Map<String, Set<String>>();
+                    filesToHighlight.clear();
                     style.dispose();
                     slicingPanel.webview.html = getSlicingContent();
                     return;
@@ -421,6 +421,17 @@ function _slicing(context: vscode.ExtensionContext) {
         let editorPath = vscode.window.activeTextEditor.document.uri.path;
         editorPath = editorPath.replace(workspaceFolders[0].uri.path, "");
         editorPath = editorPath.replace("/src/main/java/", "");
+
+        console.log('TODO Highlight targets in the overview view');
+        if (editorPath === 'edu/cmu/cs/mvelezce/perf/debug/config/core/Task.java') {
+            const hotspot = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
+            let x: vscode.Range[] = [];
+            x.push(vscode.window.activeTextEditor.document.lineAt((8 - 1)).range);
+            x.push(vscode.window.activeTextEditor.document.lineAt((14 - 1)).range);
+            x.push(vscode.window.activeTextEditor.document.lineAt((20 - 1)).range);
+            vscode.window.activeTextEditor.setDecorations(hotspot, x);
+        }
+
         const lines = filesToHighlight.get(editorPath);
         if (!lines || lines.size === 0) {
             return;
@@ -431,13 +442,15 @@ function _slicing(context: vscode.ExtensionContext) {
             if (+lineNumber <= 0) {
                 continue;
             }
+
+            console.log('TODO check which is the source and the target to not highligh those');
+
             const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
             ranges.push(line.range);
         }
         style.dispose();
         style = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
         vscode.window.activeTextEditor.setDecorations(style, ranges);
-
     }, null, context.subscriptions);
 }
 
@@ -491,7 +504,7 @@ function getSlicingContent() {
         <br>
         <hr>
         <br>
-        <div><b>Paths from Options to the Hotspot:</b></div>
+        <div style="font-size: 14px;"><b>Clickable Paths from Options to the Hotspot:</b></div>
         <br>
         <div id="connection-graph"></div>
         <script type="text/javascript">                                                           
@@ -930,11 +943,11 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
         <hr>
         <br>
         <br>
-        <div id="methodName">&nbsp;</div>
-        <div id="selected-config-name">&nbsp;</div>
-        <div id="selected-config-time">&nbsp;</div>
+        <div id="methodName" style="font-size: 14px;">&nbsp;</div>
+        <div id="selected-config-name" style="font-size: 14px;">&nbsp;</div>
+        <div id="selected-config-time" style="font-size: 14px;">&nbsp;</div>
         <br>
-        <div id="defaultExecutionTime">&nbsp;</div>
+        <div id="defaultExecutionTime" style="font-size: 14px;">&nbsp;</div>
         <br>
         <div id="local-model-table"></div>
         <br>
@@ -980,10 +993,10 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <hr>
         <br>
         <br>
-        <div style="display: inline;"id="selected-config-name"><b>Selected configuration:</b> default</div>
-        <div id="selected-config-time">Execution time:</div>
+        <div style="display: inline; font-size: 14px;" id="selected-config-name"><b>Selected configuration:</b> default</div>
+        <div id="selected-config-time" style="font-size: 14px;">Execution time:</div>
         <br>
-        <div id="defaultExecutionTime"><b>Default execution time:</b> ${defaultExecutionTime}</div>
+        <div id="defaultExecutionTime" style="font-size: 14px;"><b>Default execution time:</b> ${defaultExecutionTime}</div>
         <br>
         <div id="perfModel"></div>
         <br>
