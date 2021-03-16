@@ -777,6 +777,7 @@ function _localModels(context: vscode.ExtensionContext) {
     const methodBasicInfo = getMethodsInfo(dataDir);
     const methods2Models = getMethods2Models(dataDir);
     const names2Configs = getNames2Configs(dataDir);
+    console.log(methodBasicInfo);
     localModelPanel.webview.postMessage({
         methodBasicInfo: methodBasicInfo,
         methods2Models: methods2Models,

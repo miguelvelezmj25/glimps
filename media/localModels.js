@@ -2,6 +2,7 @@
     // Handle the message inside the webview
     window.addEventListener('message', event => {
         const methods2DefaultExecutionTimes = getMethods(event.data);
+        console.log(methods2DefaultExecutionTimes);
         const methods2Models = getMethods2Models(event.data);
         const names2Configs = getNames2Configs(event.data);
 
@@ -129,6 +130,7 @@ function subset(subset, set) {
 
 function getMethods(data) {
     const methodBasicInfo = data.methodBasicInfo;
+    console.log(methodBasicInfo);
     let methods2Time = new Map();
     for (let i = 0; i < methodBasicInfo.length; i++) {
         methods2Time.set(methodBasicInfo[i].method, methodBasicInfo[i].defaultExecutionTime);
