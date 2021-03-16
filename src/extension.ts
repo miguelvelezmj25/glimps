@@ -13,7 +13,7 @@ let sources = new Set<Number>();
 let targetClass = "";
 let target: number = -1;
 
-const style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
+let style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let filesToHighlight = new Map<String, Set<String>>();
 let sliceConnections = '';
 
@@ -380,6 +380,8 @@ function _slicing(context: vscode.ExtensionContext) {
                     targetClass = "";
                     target = -1;
                     sliceConnections = '';
+                    filesToHighlight = new Map<String, Set<String>>();
+                    style.dispose();
                     slicingPanel.webview.html = getSlicingContent();
                     return;
                 case 'slice':
@@ -432,6 +434,8 @@ function _slicing(context: vscode.ExtensionContext) {
             const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
             ranges.push(line.range);
         }
+        style.dispose();
+        style = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
         vscode.window.activeTextEditor.setDecorations(style, ranges);
 
     }, null, context.subscriptions);
