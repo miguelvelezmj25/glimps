@@ -938,15 +938,15 @@ function _globalModel(context: vscode.ExtensionContext) {
     globalModelPanel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
-                case 'viewGlobalInfluence' :
-                    if (!globalModelPanel) {
-                        return;
-                    }
-                    const config = message.config;
-                    const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
-                    allConfigs = getAllConfigs(dataDir);
-                    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
-                    return;
+                // case 'viewGlobalInfluence' :
+                //     if (!globalModelPanel) {
+                //         return;
+                //     }
+                //     const config = message.config;
+                //     const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
+                //     allConfigs = getAllConfigs(dataDir);
+                //     globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
+                //     return;
                 case 'profile' :
                     if (profilePanel) {
                         profilePanel.reveal();
@@ -1052,9 +1052,9 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div style="display: inline;"><b>Select configuration:</b></div>
+        <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
-            <select name="configSelect" id="configSelect">
+            <select name="configSelect" id="configSelect" onchange="something()">
                 ${configs}
             </select>
         </div>
@@ -1075,6 +1075,11 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
         <script type="text/javascript">
+            function something() {                    
+                console.log('something');
+            }
+            something();
+        
             (function () {    
                 const perfModelData = [${perfModel}];        
                 const perfModelTable = new Tabulator("#perfModel", {
