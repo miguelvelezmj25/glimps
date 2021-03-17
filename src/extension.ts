@@ -69,9 +69,10 @@ function _configDialog(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    let allConfigs = getAllConfigs(dataDir);
+    const allConfigs = getAllConfigs(dataDir);
     const names2Configs = getNames2Configs(dataDir);
-    panel.webview.html = getConfigDialogContent(allConfigs, names2Configs);
+    const optionValues = getOptionsValues(dataDir);
+    panel.webview.html = getConfigDialogContent(allConfigs, names2Configs, optionValues);
 
     panel.webview.onDidReceiveMessage(
         message => {
@@ -89,6 +90,27 @@ function _configDialog(context: vscode.ExtensionContext) {
                     } else {
                         vscode.commands.executeCommand('perfProfiles.start');
                     }
+                    return;
+                case 'save' :
+                    const configName = message.configName;
+                    if (configName.length === 0) {
+                        vscode.window.showErrorMessage("Name the configuration before saving it");
+                        return;
+                    }
+                    let config = "";
+                    message.config.forEach((entry: any) => {
+                        config = config.concat(entry.option);
+                        config = config.concat(",");
+                        config = config.concat(entry.value);
+                        config = config.concat("\n");
+                    });
+                    fs.writeFile(path.join(dataDir, 'configs', configName + '.csv'), config, (err) => {
+                        if (err) {
+                            vscode.window.showErrorMessage("Error saving configuration");
+                        } else {
+                            vscode.window.showErrorMessage("Configuration saved");
+                        }
+                    });
                     return;
             }
         },
@@ -108,7 +130,7 @@ function getAllConfigs(dataDir: string) {
     return configs;
 }
 
-function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any) {
+function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
     let configs = "";
     for (const config of rawConfigs) {
         configs = configs.concat("<option value=\"");
@@ -134,6 +156,18 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any) {
     }
     names2Configs = names2Configs.concat('}');
 
+    let optionsValues = '{';
+    for (let i = 0; i < optionValuesRaw.length; i++) {
+        optionsValues = optionsValues.concat('"');
+        optionsValues = optionsValues.concat(optionValuesRaw[i][0]);
+        optionsValues = optionsValues.concat('": ["');
+        optionsValues = optionsValues.concat(optionValuesRaw[i][1]);
+        optionsValues = optionsValues.concat('", "');
+        optionsValues = optionsValues.concat(optionValuesRaw[i][2]);
+        optionsValues = optionsValues.concat('"], ');
+    }
+    optionsValues = optionsValues.concat('}');
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -142,6 +176,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any) {
         <title>Tabulator Example</title>
         <link href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/tabulator_simple.min.css" rel="stylesheet">
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
     </head>
     <body>
         <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
@@ -157,16 +192,26 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any) {
         <br>
         <hr>
         <br>
+        <div style="display: inline; font-size: 14px;"><b>Save new configuration:</b></div> 
+        <input type="text" id="config-name" name="config-name" placeholder="Enter name">
+        <br>
+        <br>
+        <div id="saveConfig"></div>
+        <br>
+        <div><button id="save-config-trigger">Save configuration</button></div>
+        <br>
+        <hr>
+        <br>
         <div style="display: inline;"><button id="global-influence-trigger">View Global Performance Influence</button></div>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <br>
         <br>
         <br>
         <br>
-<!--        <div">Save new configuration: TODO use custom picker for values, add textbox to name the config, add button to save config, refresh view when saving configu</div>-->
         <br>
-        <div id="saveConfig"></div>
-        <script type="text/javascript">                          
+        <script type="text/javascript">     
+            const names2Configs = ${names2Configs};
+                             
             const configTable = new Tabulator("#displayConfig", {
                 layout: "fitColumns",
                 columns: [
@@ -177,21 +222,39 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any) {
                         
             function displayConfig() {                    
                 const config = document.getElementById("configSelect").value;
-                configTable.setData(${names2Configs}[config]);
+                configTable.setData(names2Configs[config]);
             }
             displayConfig();
-                                                     
-            // const saveConfigTable = new Tabulator("#saveConfig", {
-            //     data: configData,
-            //     layout: "fitColumns",
-            //     columns: [
-            //         { title: "Option", field: "option", sorter: "string" }, 
-            //         { title: "Value",  field: "value",  sorter: "string", editor:"select", editorParams:{values:{"male":"Male", "female":"Female", "unknown":"Unknown"}} }
-            //     ],
-            // });
+                        
+            const optionValuesData = ${optionsValues};
+            const optionValues = function(cell){
+                const options = optionValuesData[cell.getRow().getData().option];
+                const values = {};
+                values[options[0]] = options[0];
+                values[options[1]] = options[1];
+                return {values:values};
+            }
             
+            const saveConfigTable = new Tabulator("#saveConfig", {
+                layout: "fitColumns",
+                columns: [
+                    { title: "Option", field: "option", headerSort: false }, 
+                    { title: "Value",  field: "value", editor:"select", editorParams: optionValues, headerSort: false }
+                ],
+            });
+            const config = document.getElementById("configSelect").value;
+            saveConfigTable.setData(names2Configs[config]);
+                        
             (function () {
                 const vscode = acquireVsCodeApi();
+                
+                document.getElementById("save-config-trigger").addEventListener("click", function () {
+                    vscode.postMessage({
+                        command: 'save',
+                        configName: document.getElementById("config-name").value.trim(),
+                        config: saveConfigTable.getData() 
+                    });
+                });
                                 
                 document.getElementById("global-influence-trigger").addEventListener("click", function () {    
                     vscode.postMessage({
@@ -626,17 +689,17 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     );
 }
 
-function getOptions(configs: string[]) {
-    let options = "";
-    for (const config of configs) {
-        options = options.concat("<option value=\"");
-        options = options.concat(config);
-        options = options.concat("\">");
-        options = options.concat(config);
-        options = options.concat("</option>");
-    }
-    return options;
-}
+// function getOptions(configs: string[]) {
+//     let options = "";
+//     for (const config of configs) {
+//         options = options.concat("<option value=\"");
+//         options = options.concat(config);
+//         options = options.concat("\">");
+//         options = options.concat(config);
+//         options = options.concat("</option>");
+//     }
+//     return options;
+// }
 
 function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: string, hotspotDiffData: string) {
     let configs = "";
@@ -821,6 +884,10 @@ function getMethodsInfo(dataDir: string) {
         basicMethodInfo.push({method: entry[0], defaultExecutionTime: entry[1], reportTime: +entry[2]});
     });
     return basicMethodInfo;
+}
+
+function getOptionsValues(dataDir: string) {
+    return parse(fs.readFileSync(dataDir + '/options.csv', 'utf8'));
 }
 
 function getNames2Configs(dataDir: string) {
