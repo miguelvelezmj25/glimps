@@ -16,7 +16,6 @@
     "onCommand:localModels.start",
     "onCommand:perfProfiles.start",
     "onCommand:slicing.start",
-    "onCommand:sliceSource.start",
     "onCommand:sliceTarget.start"
   ],
   "main": "./out/extension.js",
@@ -48,11 +47,6 @@
         "category": "Perf Debug"
       },
       {
-        "command": "sliceSource.start",
-        "title": "Add Option for Tracing",
-        "category": "Perf Debug"
-      },
-      {
         "command": "sliceTarget.start",
         "title": "Add Hotspot for Tracing",
         "category": "Perf Debug"
@@ -60,11 +54,6 @@
     ],
     "menus": {
       "editor/context": [
-        {
-          "command": "sliceSource.start",
-          "group": "slicing",
-          "when": "editorTextFocus"
-        },
         {
           "command": "sliceTarget.start",
           "group": "slicing",

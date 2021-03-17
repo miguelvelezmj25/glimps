@@ -8,8 +8,8 @@ import * as parse from 'csv-parse/lib/sync';
 
 const request = require('sync-request');
 
-let sourceClass = "";
-let sources = new Set<Number>();
+let commonSources: { [p: string]: string[] } = {};
+let selectedCommonSources = new Set<string>();
 let targetClass = "";
 let target: number = -1;
 
@@ -36,10 +36,9 @@ export function activate(context: vscode.ExtensionContext) {
     const globalModel = vscode.commands.registerCommand('globalModel.start', () => _globalModel(context));
     const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
-    const slicingSource = vscode.commands.registerCommand('sliceSource.start', () => _sliceSource(context));
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', () => _sliceTarget(context));
     const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
-    context.subscriptions.push(configDialog, globalModel, localModels, perfProfiles, slicingSource, slicingTarget, slicing);
+    context.subscriptions.push(configDialog, globalModel, localModels, perfProfiles, slicingTarget, slicing);
 }
 
 // this method is called when your extension is deactivated
@@ -321,30 +320,6 @@ function _sliceTarget(context: vscode.ExtensionContext) {
     }
 }
 
-function _sliceSource(context: vscode.ExtensionContext) {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-        deactivate();
-        return;
-    }
-
-    const sliceData = selectForSlice(workspaceFolders);
-    if (sliceData.filePath === undefined || sliceData.line === undefined) {
-        return;
-    }
-
-    if (sourceClass === "") {
-        sourceClass = sliceData.filePath;
-    }
-    sources.add(sliceData.line);
-
-    if (slicingPanel) {
-        slicingPanel.webview.html = getSlicingContent();
-    } else {
-        _slicing(context);
-    }
-}
-
 function setSliceConnections(connections: any[]) {
     let result = '';
     connections.forEach(entry => {
@@ -365,6 +340,14 @@ function setSliceConnections(connections: any[]) {
     sliceConnections = result;
 }
 
+function getSliceSources(dataDir: string) {
+    let sources: { [x: string]: string[]; } = {};
+    parse(fs.readFileSync(path.join(dataDir, 'tracing', 'sources.csv'), 'utf8')).forEach((entry: string[]) => {
+        sources[entry[1]] = [entry[0], entry[2]];
+    });
+    return sources;
+}
+
 function _slicing(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
@@ -383,20 +366,19 @@ function _slicing(context: vscode.ExtensionContext) {
         } // Webview options. More on these later.
     );
 
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    commonSources = getSliceSources(dataDir);
     slicingPanel.webview.html = getSlicingContent();
 
-    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const sliceInfo = getSliceInfo(dataDir);
     const port = sliceInfo.port;
-
     const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
-
     // Handle messages from the webview
     slicingPanel.webview.onDidReceiveMessage(
         message => {
+            const regex = /\./g;
             switch (message.command) {
                 case 'link':
-                    const regex = /\./g;
                     const className = message.method.substring(0, message.method.indexOf('\n')).replace(regex, '/');
                     const method = message.method.substring(message.method.indexOf('\n') + 1);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
@@ -440,8 +422,6 @@ function _slicing(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    sourceClass = "";
-                    sources = new Set<Number>();
                     targetClass = "";
                     target = -1;
                     sliceConnections = '';
@@ -453,15 +433,23 @@ function _slicing(context: vscode.ExtensionContext) {
                     if (!slicingPanel) {
                         return;
                     }
-                    if (sourceClass === "" || sources.size === 0 || targetClass === "" || target <= 0) {
+                    if (message.selectedOptions.length === 0 || targetClass === "" || target <= 0) {
                         vscode.window.showErrorMessage("Select options and hotspots for tracing");
                         return;
                     }
+
+                    selectedCommonSources.clear();
+                    let lines: number[] = [];
+                    message.selectedOptions.forEach((option: string) => {
+                        selectedCommonSources.add(option);
+                        lines.push(+commonSources[option][1]);
+                    });
+
                     const res = request('POST', 'http://localhost:' + port + '/slice',
                         {
                             json: {
-                                sourceClass: sourceClass,
-                                sourceLines: Array.from(sources.values()),
+                                sourceClass: (commonSources[message.selectedOptions[0]][0].replace(regex, '/') + '.java'),
+                                sourceLines: lines,
                                 targetClass: targetClass,
                                 targetLines: target,
                             }
@@ -532,20 +520,28 @@ function getSliceInfo(dataDir: string) {
 }
 
 function getSlicingContent() {
-    const sortedSources = Array.from(sources).sort((a, b) => (a > b) ? 1 : -1);
-    let sourceList = '<ul><li>Select options</li></ul>';
-    if (sources.size > 0) {
-        sourceList = '';
-        sortedSources.forEach(function (source) {
-            sourceList += '<li>' + sourceClass + ":" + source + '</li>';
-        });
-        sourceList = '<ul>' + sourceList + '</ul>';
-    }
-
     let targetList = '<ul><li>Select a hotspot</li></ul>';
     if (target > 0) {
         targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
     }
+
+    let commonSourcesSelect = '';
+    Object.entries(commonSources).forEach(entry => {
+        commonSourcesSelect = commonSourcesSelect.concat('<div style="font-size: 14px;">\n');
+        commonSourcesSelect = commonSourcesSelect.concat('<input type="checkbox" id="');
+        commonSourcesSelect = commonSourcesSelect.concat(entry[0]);
+        commonSourcesSelect = commonSourcesSelect.concat('" name="source-checkbox" ');
+        if (selectedCommonSources.has(entry[0])) {
+            commonSourcesSelect = commonSourcesSelect.concat(' checked');
+        }
+        commonSourcesSelect = commonSourcesSelect.concat('>\n');
+        commonSourcesSelect = commonSourcesSelect.concat('<label for="');
+        commonSourcesSelect = commonSourcesSelect.concat(entry[0]);
+        commonSourcesSelect = commonSourcesSelect.concat('">');
+        commonSourcesSelect = commonSourcesSelect.concat(entry[0] + ' - ' + entry[1][0] + '():' + entry[1][1]);
+        commonSourcesSelect = commonSourcesSelect.concat('</label>\n');
+        commonSourcesSelect = commonSourcesSelect.concat('</div>\n');
+    });
 
     const graphData: string = '{ data: \"digraph { node [shape=box fillcolor=white style=filled] concentrate=true ' + sliceConnections + '}\" }';
 
@@ -560,8 +556,12 @@ function getSlicingContent() {
         <script src="https://d3js.org/d3.v5.min.js"></script>
         <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
         <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
+        <div style="font-size: 14px;"><b>Select Options to Trace:</b></div>
+        <br>
+        ${commonSourcesSelect}
+        <br>
+        <br>
         <div>
-            <b>Options:</b> ${sourceList} 
             <b>Hotspot:</b> ${targetList} 
         </div>
         <br>
@@ -569,13 +569,18 @@ function getSlicingContent() {
         <br>
         <hr>
         <br>
-        <div style="font-size: 14px;"><b>Clickable Paths from Options to the Hotspot:</b></div>
+        <div style="font-size: 14px;"><b>Clickable Trace from Options to the Hotspot:</b></div>
         <br>
         <div id="connection-graph"></div>
-        <script type="text/javascript">                                                           
+        <script type="text/javascript"> 
+        
+            function slice() {
+                mySlice();
+            }
+        
             (function () {
                 const vscode = acquireVsCodeApi();
-                                
+                                                
                 const graphData = ${graphData}.data;
                 if(graphData.length > 74) { 
                     d3.select("#connection-graph").graphviz()
@@ -611,6 +616,21 @@ function getSlicingContent() {
                 document.getElementById("slice-trigger").addEventListener("click", function () {                    
                     vscode.postMessage({
                         command: 'slice'
+                    });
+                });
+                
+                document.getElementsByName("source-checkbox").forEach( element => {
+                    element.addEventListener("change", () => {
+                        let selectOptions = [];
+                        document.getElementsByName("source-checkbox").forEach(element => {
+                            if(element.checked) {
+                                selectOptions.push(element.id);
+                            }
+                        })
+                        vscode.postMessage({
+                            command: 'slice',
+                            selectedOptions: selectOptions
+                        });
                     });
                 });
             }())
@@ -688,18 +708,6 @@ function _perfProfiles(context: vscode.ExtensionContext) {
         context.subscriptions
     );
 }
-
-// function getOptions(configs: string[]) {
-//     let options = "";
-//     for (const config of configs) {
-//         options = options.concat("<option value=\"");
-//         options = options.concat(config);
-//         options = options.concat("\">");
-//         options = options.concat(config);
-//         options = options.concat("</option>");
-//     }
-//     return options;
-// }
 
 function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: string, hotspotDiffData: string) {
     let configs = "";
@@ -842,7 +850,6 @@ function _localModels(context: vscode.ExtensionContext) {
     const methodBasicInfo = getMethodsInfo(dataDir);
     const methods2Models = getMethods2Models(dataDir);
     const names2Configs = getNames2Configs(dataDir);
-    console.log(methodBasicInfo);
     localModelPanel.webview.postMessage({
         methodBasicInfo: methodBasicInfo,
         methods2Models: methods2Models,
