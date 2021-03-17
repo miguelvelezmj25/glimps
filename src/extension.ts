@@ -340,8 +340,22 @@ function setSliceConnections(connections: any[]) {
     sliceConnections = result;
 }
 
+function getHotspotInfluences(dataDir: string) {
+    let hotspotInfluences: { [key: string]: string[]; } = {};
+    const regex = /\./g;
+    parse(fs.readFileSync(path.join(dataDir, 'tracing', 'targets.csv'), 'utf8')).forEach((entry: string[]) => {
+        let file = entry[0].replace(regex, '/');
+        file = file.concat('.java');
+        if (!(file in hotspotInfluences)) {
+            hotspotInfluences[file] = [];
+        }
+        hotspotInfluences[file].push(entry[1]);
+    });
+    return hotspotInfluences;
+}
+
 function getSliceSources(dataDir: string) {
-    let sources: { [x: string]: string[]; } = {};
+    let sources: { [key: string]: string[]; } = {};
     parse(fs.readFileSync(path.join(dataDir, 'tracing', 'sources.csv'), 'utf8')).forEach((entry: string[]) => {
         sources[entry[1]] = [entry[0], entry[2]];
     });
@@ -466,23 +480,24 @@ function _slicing(context: vscode.ExtensionContext) {
         context.subscriptions
     );
 
+    const hotspotInfluences = getHotspotInfluences(dataDir);
     vscode.window.onDidChangeActiveTextEditor(editor => {
         if (!vscode.window.activeTextEditor) {
             return;
         }
 
-        let editorPath = vscode.window.activeTextEditor.document.uri.path;
+        const doc = vscode.window.activeTextEditor.document;
+        let editorPath = doc.uri.path;
         editorPath = editorPath.replace(workspaceFolders[0].uri.path, "");
         editorPath = editorPath.replace("/src/main/java/", "");
 
-        console.log('TODO Highlight targets in the overview view');
-        if (editorPath === 'edu/cmu/cs/mvelezce/perf/debug/config/core/Task.java') {
+        if (editorPath in hotspotInfluences) {
             const hotspot = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
-            let x: vscode.Range[] = [];
-            x.push(vscode.window.activeTextEditor.document.lineAt((8 - 1)).range);
-            x.push(vscode.window.activeTextEditor.document.lineAt((14 - 1)).range);
-            x.push(vscode.window.activeTextEditor.document.lineAt((20 - 1)).range);
-            vscode.window.activeTextEditor.setDecorations(hotspot, x);
+            let ranges: vscode.Range[] = [];
+            hotspotInfluences[editorPath].forEach(entry => {
+                ranges.push(doc.lineAt((+entry - 1)).range);
+            });
+            vscode.window.activeTextEditor.setDecorations(hotspot, ranges);
         }
 
         const lines = filesToHighlight.get(editorPath);
