@@ -70,17 +70,12 @@ function _configDialog(context: vscode.ExtensionContext) {
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     let allConfigs = getAllConfigs(dataDir);
-    panel.webview.html = getConfigDialogContent([], allConfigs, 'default');
+    const names2Configs = getNames2Configs(dataDir);
+    panel.webview.html = getConfigDialogContent(allConfigs, names2Configs);
 
     panel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
-                case 'display' :
-                    const config = message.config;
-                    const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
-                    allConfigs = getAllConfigs(dataDir);
-                    panel.webview.html = getConfigDialogContent(configData, allConfigs, config);
-                    return;
                 case 'globalInfluence' :
                     if (globalModelPanel) {
                         globalModelPanel.reveal();
@@ -113,8 +108,7 @@ function getAllConfigs(dataDir: string) {
     return configs;
 }
 
-function getConfigDialogContent(rawConfig: string[], rawConfigs: string[], rawSelectedConfigName: string) {
-    const config = getConfig(rawConfig);
+function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any) {
     let configs = "";
     for (const config of rawConfigs) {
         configs = configs.concat("<option value=\"");
@@ -123,6 +117,22 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[], rawSe
         configs = configs.concat(config);
         configs = configs.concat("</option>");
     }
+
+    let names2Configs = '{';
+    for (let i = 0; i < names2ConfigsRaw.length; i++) {
+        names2Configs = names2Configs.concat('"');
+        names2Configs = names2Configs.concat(names2ConfigsRaw[i].config);
+        names2Configs = names2Configs.concat('": [');
+        for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
+            names2Configs = names2Configs.concat('{ option : "');
+            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][0]);
+            names2Configs = names2Configs.concat('", value: "');
+            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][1]);
+            names2Configs = names2Configs.concat('"}, ');
+        }
+        names2Configs = names2Configs.concat('],');
+    }
+    names2Configs = names2Configs.concat('}');
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -134,18 +144,14 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[], rawSe
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div style="display: inline;"><b>Select configuration:</b></div>
+        <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
-            <select name="configSelect" id="configSelect">
+            <select name="configSelect" id="configSelect" onchange="displayConfig()">
                 ${configs}
             </select>
         </div>
-        <div style="display: inline;"><button id="display-config-trigger">Display Configuration</button></div>
         <br>
         <hr>
-        <br>
-        <br>
-        <div id="selected-config-name" style="font-size: 14px;"><b>Selected configuration:</b> ${rawSelectedConfigName}</div>
         <br>
         <div id="displayConfig"></div>
         <br>
@@ -160,17 +166,21 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[], rawSe
 <!--        <div">Save new configuration: TODO use custom picker for values, add textbox to name the config, add button to save config, refresh view when saving configu</div>-->
         <br>
         <div id="saveConfig"></div>
-        <script type="text/javascript">                   
-            const configData = [${config}];        
+        <script type="text/javascript">                          
             const configTable = new Tabulator("#displayConfig", {
-                data: configData,
                 layout: "fitColumns",
                 columns: [
                     { title: "Option", field: "option", sorter: "string" }, 
                     { title: "Value",  field: "value",  sorter: "string" }
                 ],
             });
-                 
+                        
+            function displayConfig() {                    
+                const config = document.getElementById("configSelect").value;
+                configTable.setData(${names2Configs}[config]);
+            }
+            displayConfig();
+                                                     
             // const saveConfigTable = new Tabulator("#saveConfig", {
             //     data: configData,
             //     layout: "fitColumns",
@@ -182,15 +192,7 @@ function getConfigDialogContent(rawConfig: string[], rawConfigs: string[], rawSe
             
             (function () {
                 const vscode = acquireVsCodeApi();
-                
-                document.getElementById("display-config-trigger").addEventListener("click", function () {                    
-                    const config = document.getElementById("configSelect").value;                 
-                    vscode.postMessage({
-                        command: 'display',
-                        config: config
-                    });
-                });
-                
+                                
                 document.getElementById("global-influence-trigger").addEventListener("click", function () {    
                     vscode.postMessage({
                         command: 'globalInfluence'
@@ -510,7 +512,7 @@ function getSlicingContent() {
         <script type="text/javascript">                                                           
             (function () {
                 const vscode = acquireVsCodeApi();
-                
+                                
                 const graphData = ${graphData}.data;
                 if(graphData.length > 74) { 
                     d3.select("#connection-graph").graphviz()
