@@ -951,14 +951,11 @@ function _globalModel(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-
-    const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'configs/default.csv'), 'utf8'));
-
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
     const allConfigs = getAllConfigs(dataDir);
     const names2Configs = getNames2Configs(dataDir);
-    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, defaultConfig, 'default', names2Configs);
+    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, names2Configs);
 
     globalModelPanel.webview.onDidReceiveMessage(
         message => {
@@ -1054,10 +1051,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
     </html>`;
 }
 
-function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], defaultConfig: string[], rawConfig: string[], rawSelectedConfigName: string, names2ConfigsRaw: any) {
-    const selectedConfigName = "{ name: \"" + rawSelectedConfigName + "\" }";
-    const selectedConfig = getSelectedConfig(defaultConfig, rawConfig);
-
+function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any) {
     const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
 
     let configs = "";
@@ -1166,14 +1160,29 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             const rawPerfModel = ${perfModel}
             const names2PerfModels = ${names2PerfModels};
             const names2Configs = ${names2Configs};
+            let selectedRow = undefined;
           
             const perfModelTable = new Tabulator("#perfModel", {
                 layout: "fitColumns",
+                selectable: true,
                 columns: [
                     { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
                     { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
                 ],
+                rowSelectionChanged:selectInfluence
             });
+            function selectInfluence(data, rows) {
+                if(rows.length === 0) {
+                    return;
+                }
+                if(rows.length === 1) {
+                    selectedRow = rows[0];
+                    return;
+                }
+                selectedRow.deselect();
+                rows = rows.splice(rows.indexOf(selectedRow), 1);
+                selectedRow = rows[0]; 
+            }
             function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
                 let one = a.replace("+","");
                 one = one.replace("-","");
@@ -1234,7 +1243,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             viewPerfModel();
         
             // (function () {    
-            //     const optionsToSelect = [${selectedConfig}];
+            //     const optionsToSelect = [{selectedConfig}];
             //     if(optionsToSelect.length > 0) {
             //         const selectedOptions = new Set();
             //         optionsToSelect.forEach(entry => {
@@ -1264,7 +1273,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             //             time -= influence;
             //         }
             //     });
-            //     document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + ${selectedConfigName}.name;
+            //     document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + {selectedConfigName}.name;
             //     document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
             //    
             //     perfModelTable.getRows().forEach(row => {
