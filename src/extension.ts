@@ -958,6 +958,8 @@ function _globalModel(context: vscode.ExtensionContext) {
     const methods2Models = getMethods2Models(dataDir);
     globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, names2Configs, methods2Models);
 
+    const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
+
     globalModelPanel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
@@ -970,6 +972,55 @@ function _globalModel(context: vscode.ExtensionContext) {
                 //     allConfigs = getAllConfigs(dataDir);
                 //     globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
                 //     return;
+                case 'open-region' :
+                    console.log(message);
+                    const fileData = message.method.split(".");
+                    let className = '';
+                    for (let i = 0; i < (fileData.length - 1); i++) {
+                        className = className.concat(fileData[i]);
+                        if (i < (fileData.length - 2)) {
+                            className = className.concat("/");
+                        }
+                    }
+                    const method = fileData[fileData.length - 1];
+                    console.log((className));
+                    console.log(method);
+                    let uri = vscode.Uri.file(filesRoot + className + '.java');
+                    vscode.workspace.openTextDocument(uri).then(doc => {
+                        vscode.window.showTextDocument(doc, vscode.ViewColumn.One)
+                            .then(editor => {
+                                vscode.commands.executeCommand<DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', uri)
+                                    .then(syms => {
+                                        if (!syms || syms.length === 0) {
+                                            return;
+                                        }
+
+                                        let methods2Symbols = new Map<String, DocumentSymbol>();
+                                        for (const sym of syms) {
+                                            for (const child of sym.children) {
+                                                if (child.kind !== SymbolKind.Method && child.kind !== SymbolKind.Constructor) {
+                                                    continue;
+                                                }
+
+                                                let methodName = child.name;
+                                                methodName = methodName.substring(0, methodName.indexOf('('));
+                                                if (child.kind === SymbolKind.Constructor) {
+                                                    methodName = '<init>';
+                                                }
+                                                methods2Symbols.set(methodName, child);
+                                            }
+                                        }
+
+                                        const symbol = methods2Symbols.get(method);
+                                        if (!symbol) {
+                                            return;
+                                        }
+                                        editor.revealRange(symbol.range, TextEditorRevealType.Default);
+                                        editor.selection = new Selection(symbol.range.start, symbol.range.start);
+                                    });
+                            });
+                    });
+                    return;
                 case 'profile' :
                     if (profilePanel) {
                         profilePanel.reveal();
@@ -1186,13 +1237,13 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     <body>
         <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
-            <select name="configSelect" id="configSelect" onchange="viewPerfModel()">
+            <select name="configSelect" id="configSelect"">
                 ${configs}
             </select>
         </div>
         <div style="display: inline; font-size: 14px;">compare to: TODO? </div>
 <!--        <div style="display: inline;">-->
-<!--            <select name="compareSelect" id="compareSelect" onchange="viewPerfModel()">-->
+<!--            <select name="compareSelect" id="compareSelect"">-->
 <!--                            // {configs} -->
 <!--            </select>-->
 <!--        </div>-->
@@ -1214,29 +1265,31 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
         <script type="text/javascript">          
             (function () {    
                 const vscode = acquireVsCodeApi();
-                
-                const localInfluenceTable = new Tabulator("#localInfluence", {
-                    layout: "fitColumns",
-                    columns: [
-                        { title: "Influenced Methods", field: "methods", sorter: "string" }, 
-                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
-                    ],
-                    rowClick:openFile,
-                });
-                
-                function openFile(e, row){
-                    //e - the click event object
-                    //row - row component
-                    console.log("HELO");
-                }
-                
                 const defaultExecutionTime = ${defaultExecutionTime}.time;
                 const rawPerfModel = ${perfModel}
                 const names2PerfModels = ${names2PerfModels};
                 const names2LocalModels = ${names2LocalModels};
                 const names2Configs = ${names2Configs};
                 let selectedRow = undefined;
-                      
+                
+                const localInfluenceTable = new Tabulator("#localInfluence", {
+                    layout: "fitColumns",
+                    columns: [
+                        { title: "Influenced Methods", field: "methods", sorter: "string" }, 
+                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                        { title: "method",  field: "method" },
+                    ],
+                    rowClick:openFile,
+                });
+                localInfluenceTable.hideColumn("method");
+                function openFile(e, row){
+                    const file = row.getData().method;
+                    vscode.postMessage({
+                        command: 'open-region',
+                        method: file
+                    });
+                }
+                                      
                 const perfModelTable = new Tabulator("#perfModel", {
                     layout: "fitColumns",
                     selectable: true,
@@ -1293,7 +1346,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     influencedMethods.forEach((influence, methodRaw) => {
                         const entries = methodRaw.split(".");
                         const method = (entries[entries.length - 2]) + "." + (entries[entries.length - 1]) + '(...)'; 
-                        localInfluence.push({methods: method, influence: influence});
+                        localInfluence.push({methods: method, influence: influence, method: methodRaw});
                     });
                     localInfluenceTable.setData(localInfluence);
                 }
@@ -1355,6 +1408,10 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
             }
             viewPerfModel();
+                
+            document.getElementById("configSelect").addEventListener("change", () => {
+                viewPerfModel();
+            });
                 
                 
                 
