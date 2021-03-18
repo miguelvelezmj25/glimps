@@ -953,8 +953,8 @@ function _globalModel(context: vscode.ExtensionContext) {
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
 
     const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'configs/default.csv'), 'utf8'));
-    const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
 
+    const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
     const allConfigs = getAllConfigs(dataDir);
     const names2Configs = getNames2Configs(dataDir);
@@ -1054,9 +1054,11 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
     </html>`;
 }
 
-function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: string[], rawConfigs: string[], defaultConfig: string[], rawConfig: string[], rawSelectedConfigName: string, names2ConfigsRaw: any) {
+function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], defaultConfig: string[], rawConfig: string[], rawSelectedConfigName: string, names2ConfigsRaw: any) {
     const selectedConfigName = "{ name: \"" + rawSelectedConfigName + "\" }";
     const selectedConfig = getSelectedConfig(defaultConfig, rawConfig);
+
+    const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
 
     let configs = "";
     for (const config of rawConfigs) {
@@ -1066,6 +1068,22 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         configs = configs.concat(config);
         configs = configs.concat("</option>");
     }
+
+    let names2Configs = '{';
+    for (let i = 0; i < names2ConfigsRaw.length; i++) {
+        names2Configs = names2Configs.concat('"');
+        names2Configs = names2Configs.concat(names2ConfigsRaw[i].config);
+        names2Configs = names2Configs.concat('": [');
+        for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
+            names2Configs = names2Configs.concat('{ option : "');
+            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][0]);
+            names2Configs = names2Configs.concat('", value: "');
+            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][1]);
+            names2Configs = names2Configs.concat('"}, ');
+        }
+        names2Configs = names2Configs.concat('],');
+    }
+    names2Configs = names2Configs.concat('}');
 
     const perfModel = getPerfModel(rawPerfModel);
     const perfModelEval = eval(perfModel);
@@ -1088,7 +1106,6 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
             let sameValues = true;
             entry.options.forEach((option: any) => {
                 const selection = selections.get(option.option);
-                console.log(selection);
                 if (option.to !== selection) {
                     sameValues = false;
                 }
@@ -1145,7 +1162,10 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
         <script type="text/javascript">   
+            const defaultExecutionTime = ${defaultExecutionTime}.time;
+            const rawPerfModel = ${perfModel}
             const names2PerfModels = ${names2PerfModels};
+            const names2Configs = ${names2Configs};
           
             const perfModelTable = new Tabulator("#perfModel", {
                 layout: "fitColumns",
@@ -1154,7 +1174,6 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                     { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
                 ],
             });
-            
             function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
                 let one = a.replace("+","");
                 one = one.replace("-","");
@@ -1162,7 +1181,6 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                 two = two.replace("-","");
                 return (+one) - (+two);
             }
-            
             function customFormatter(cell, formatterParams, onRendered) {
                 const val = cell.getValue();
                 const entries = val.split(",");
@@ -1174,10 +1192,44 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
                 }
                 return cellDiv;
             }
-        
+                    
             function viewPerfModel() {                    
                 const config = document.getElementById("configSelect").value;
                 perfModelTable.setData(names2PerfModels[config]);
+                
+                const configSelected = names2Configs[config];
+                const configValues = new Map();
+                for (let i = 0; i < configSelected.length; i++) {
+                    configValues.set(configSelected[i].option, configSelected[i].value);
+                }
+                
+                let time = defaultExecutionTime;
+                rawPerfModel.forEach(entry => {
+                    const selections = new Map();
+                    entry.options.forEach(option => {
+                        const value = configValues.get(option.option);
+                        selections.set(option.option, value);
+                    });
+
+                    let sameValues = true;
+                    entry.options.forEach(option => {
+                        const selection = selections.get(option.option);
+                        if (option.to !== selection) {
+                            sameValues = false;
+                        }
+                    });
+                    if(sameValues) {
+                        const influence = +entry.influence;
+                        if(entry.sign === '+') {
+                            time += influence;
+                        }
+                        else {
+                            time -= influence;
+                        }
+                    }
+                });
+                
+                document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
             }
             viewPerfModel();
         
