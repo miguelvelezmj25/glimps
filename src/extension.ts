@@ -955,7 +955,8 @@ function _globalModel(context: vscode.ExtensionContext) {
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
     const allConfigs = getAllConfigs(dataDir);
     const names2Configs = getNames2Configs(dataDir);
-    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, names2Configs);
+    const methods2Models = getMethods2Models(dataDir);
+    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, names2Configs, methods2Models);
 
     globalModelPanel.webview.onDidReceiveMessage(
         message => {
@@ -1051,7 +1052,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
     </html>`;
 }
 
-function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any) {
+function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
     const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
 
     let configs = "";
@@ -1123,6 +1124,27 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     }
     names2PerfModels = names2PerfModels.concat('}');
 
+    let regions2Options = '[';
+    methods2ModelsRaw.forEach((entry: any) => {
+        regions2Options = regions2Options.concat('{ region: "');
+        regions2Options = regions2Options.concat(entry.method);
+        regions2Options = regions2Options.concat('", options: [');
+        const options = new Set<string>();
+        entry.model.forEach((term: string[]) => {
+            const optionsRaw = term[0].split(',');
+            optionsRaw.forEach((optionRaw: string) => {
+                options.add(optionRaw.split(' ')[0]);
+            });
+        });
+        options.forEach((option: string) => {
+            regions2Options = regions2Options.concat('"');
+            regions2Options = regions2Options.concat(option);
+            regions2Options = regions2Options.concat('",');
+        });
+        regions2Options = regions2Options.concat(']},');
+    });
+    regions2Options = regions2Options.concat(']');
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -1151,6 +1173,11 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
         <br>
         <div id="perfModel"></div>
         <br>
+        <br>
+        <div style="font-size: 14px;"><b>Options' Local Influence</b></div>
+        <br>
+        <div id="localInfluence"></div>
+        <br>
         <hr>
         <br>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
@@ -1160,7 +1187,16 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             const rawPerfModel = ${perfModel}
             const names2PerfModels = ${names2PerfModels};
             const names2Configs = ${names2Configs};
+            const regions2Options = ${regions2Options};
             let selectedRow = undefined;
+            
+            const localInfluenceTable = new Tabulator("#localInfluence", {
+                layout: "fitColumns",
+                columns: [
+                    { title: "Influenced Methods", field: "methods", sorter: "string" }, 
+                    { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                ],
+            });
           
             const perfModelTable = new Tabulator("#perfModel", {
                 layout: "fitColumns",
@@ -1173,15 +1209,37 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             });
             function selectInfluence(data, rows) {
                 if(rows.length === 0) {
+                    localInfluenceTable.setData([]);
                     return;
                 }
+                
                 if(rows.length === 1) {
+                    selectedRow = rows[0];
+                }
+                else {
+                    selectedRow.deselect();
+                    rows = rows.splice(rows.indexOf(selectedRow), 1);
                     selectedRow = rows[0];
                     return;
                 }
-                selectedRow.deselect();
-                rows = rows.splice(rows.indexOf(selectedRow), 1);
-                selectedRow = rows[0]; 
+                
+                const influencedMethods = new Set();
+                selectedRow.getData().option.split(',').splice('', 1).forEach(optionRaw => {
+                   const option = optionRaw.split(' ')[0]
+                   regions2Options.forEach(entry => {
+                       if(entry.options.includes(option)) {
+                           influencedMethods.add(entry.region);
+                       }
+                   });
+                });
+                
+                const localInfluence = [];
+                influencedMethods.forEach(methodRaw => {
+                    const entries = methodRaw.split(".");
+                    const method = (entries[entries.length - 2]) + "." + (entries[entries.length - 1]) + '(...)'; 
+                    localInfluence.push({methods: method});
+                });
+                localInfluenceTable.setData(localInfluence);
             }
             function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
                 let one = a.replace("+","");
@@ -1201,7 +1259,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 }
                 return cellDiv;
             }
-                    
+                                
             function viewPerfModel() {                    
                 const config = document.getElementById("configSelect").value;
                 perfModelTable.setData(names2PerfModels[config]);
