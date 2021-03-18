@@ -1174,47 +1174,6 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     }
     names2LocalModels = names2LocalModels.concat('}');
 
-    // let regions2Options = '[';
-    // methods2ModelsRaw.forEach((entry: any) => {
-    //     regions2Options = regions2Options.concat('{ region: "');
-    //     regions2Options = regions2Options.concat(entry.method);
-    //     regions2Options = regions2Options.concat('", options: [');
-    //     const options = new Set<string>();
-    //     entry.model.forEach((term: string[]) => {
-    //         const optionsRaw = term[0].split(',');
-    //         optionsRaw.forEach((optionRaw: string) => {
-    //             options.add(optionRaw.split(' ')[0]);
-    //         });
-    //     });
-    //     options.forEach((option: string) => {
-    //         regions2Options = regions2Options.concat('"');
-    //         regions2Options = regions2Options.concat(option);
-    //         regions2Options = regions2Options.concat('",');
-    //     });
-    //     const optionsToInfluence = new Map<string[], string>();
-    //     entry.model.forEach((term: string[]) => {
-    //         const terms: string[] = [];
-    //         term[0].split(',').forEach((optionRaw: string) => {
-    //             terms.push(optionRaw.split(' ')[0]);
-    //         });
-    //         optionsToInfluence.set(terms, term[1]);
-    //     });
-    //     regions2Options = regions2Options.concat('], influence: [');
-    //     optionsToInfluence.forEach((value: string, key: string[]) => {
-    //         regions2Options = regions2Options.concat('{ options: [');
-    //         key.forEach((option: string) => {
-    //             regions2Options = regions2Options.concat('"');
-    //             regions2Options = regions2Options.concat(option);
-    //             regions2Options = regions2Options.concat('", ');
-    //         });
-    //         regions2Options = regions2Options.concat('], value: "');
-    //         regions2Options = regions2Options.concat(value);
-    //         regions2Options = regions2Options.concat('" },');
-    //     });
-    //     regions2Options = regions2Options.concat(']},');
-    // });
-    // regions2Options = regions2Options.concat(']');
-
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -1252,142 +1211,153 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
         <br>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
-        <script type="text/javascript">   
-            const defaultExecutionTime = ${defaultExecutionTime}.time;
-            const rawPerfModel = ${perfModel}
-            const names2PerfModels = ${names2PerfModels};
-            const names2LocalModels = ${names2LocalModels};
-            const names2Configs = ${names2Configs};
-            let selectedRow = undefined;
-            
-            const localInfluenceTable = new Tabulator("#localInfluence", {
-                layout: "fitColumns",
-                columns: [
-                    { title: "Influenced Methods", field: "methods", sorter: "string" }, 
-                    { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
-                ],
-            });
-          
-            const perfModelTable = new Tabulator("#perfModel", {
-                layout: "fitColumns",
-                selectable: true,
-                columns: [
-                    { title: "Options", field: "option", sorter: "string", formatter: customFormatter }, 
-                    { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
-                ],
-                rowSelectionChanged:selectInfluence
-            });
-            function selectInfluence(data, rows) {
-                if(rows.length === 0) {
-                    localInfluenceTable.setData([]);
-                    return;
-                }
+        <script type="text/javascript">          
+            (function () {    
+                const vscode = acquireVsCodeApi();
                 
-                if(rows.length === 1) {
-                    selectedRow = rows[0];
-                }
-                else {
-                    selectedRow.deselect();
-                    rows = rows.splice(rows.indexOf(selectedRow), 1);
-                    selectedRow = rows[0];
-                    return;
-                }
-                
-                let selectedOptions = new Set();
-                selectedRow.getData().option.split(',').forEach(optionRaw => {
-                    if(optionRaw.length > 0) {
-                        selectedOptions.add(optionRaw.split(' ')[0]);
-                    }
+                const localInfluenceTable = new Tabulator("#localInfluence", {
+                    layout: "fitColumns",
+                    columns: [
+                        { title: "Influenced Methods", field: "methods", sorter: "string" }, 
+                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                    ],
+                    rowClick:openFile,
                 });
-                selectedOptions = Array.from(selectedOptions);
                 
-                const influencedMethods = new Map();
-                const config = document.getElementById("configSelect").value;
-                names2LocalModels[config].forEach(localModel => {
-                    localModel.model.forEach(term => {
-                        let optionsInTerm = new Set();
-                        term.option.split(',').forEach(optionRaw => {
-                            if(optionRaw.length > 0) {
-                                optionsInTerm.add(optionRaw.split(' ')[0]);
+                function openFile(e, row){
+                    //e - the click event object
+                    //row - row component
+                    console.log("HELO");
+                }
+                
+                const defaultExecutionTime = ${defaultExecutionTime}.time;
+                const rawPerfModel = ${perfModel}
+                const names2PerfModels = ${names2PerfModels};
+                const names2LocalModels = ${names2LocalModels};
+                const names2Configs = ${names2Configs};
+                let selectedRow = undefined;
+                      
+                const perfModelTable = new Tabulator("#perfModel", {
+                    layout: "fitColumns",
+                    selectable: true,
+                    columns: [
+                        { title: "Options", field: "option", sorter: "string", formatter: customFormatter }, 
+                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                    ],
+                    rowSelectionChanged:selectInfluence
+                });
+                function selectInfluence(data, rows) {
+                    if(rows.length === 0) {
+                        localInfluenceTable.setData([]);
+                        return;
+                    }
+                    
+                    if(rows.length === 1) {
+                        selectedRow = rows[0];
+                    }
+                    else {
+                        selectedRow.deselect();
+                        rows = rows.splice(rows.indexOf(selectedRow), 1);
+                        selectedRow = rows[0];
+                        return;
+                    }
+                    
+                    let selectedOptions = new Set();
+                    selectedRow.getData().option.split(',').forEach(optionRaw => {
+                        if(optionRaw.length > 0) {
+                            selectedOptions.add(optionRaw.split(' ')[0]);
+                        }
+                    });
+                    selectedOptions = Array.from(selectedOptions);
+                    
+                    const influencedMethods = new Map();
+                    const config = document.getElementById("configSelect").value;
+                    names2LocalModels[config].forEach(localModel => {
+                        localModel.model.forEach(term => {
+                            let optionsInTerm = new Set();
+                            term.option.split(',').forEach(optionRaw => {
+                                if(optionRaw.length > 0) {
+                                    optionsInTerm.add(optionRaw.split(' ')[0]);
+                                }
+                            });
+                            optionsInTerm = Array.from(optionsInTerm);
+                            
+                            if(selectedOptions.sort().join(',') === optionsInTerm.sort().join(',')) {
+                                influencedMethods.set(localModel.method, term.influence);
                             }
                         });
-                        optionsInTerm = Array.from(optionsInTerm);
-                        
-                        if(selectedOptions.sort().join(',') === optionsInTerm.sort().join(',')) {
-                            influencedMethods.set(localModel.method, term.influence);
-                        }
                     });
-                });
-                
-                                
-                const localInfluence = [];
-                influencedMethods.forEach((influence, methodRaw) => {
-                    const entries = methodRaw.split(".");
-                    const method = (entries[entries.length - 2]) + "." + (entries[entries.length - 1]) + '(...)'; 
-                    localInfluence.push({methods: method, influence: influence});
-                });
-                localInfluenceTable.setData(localInfluence);
-            }
-            function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
-                let one = a.replace("+","");
-                one = one.replace("-","");
-                let two = b.replace("+","");
-                two = two.replace("-","");
-                return (+one) - (+two);
-            }
-            function customFormatter(cell, formatterParams, onRendered) {
-                const val = cell.getValue();
-                const entries = val.split(",");
-                const cellDiv = document.createElement('div');
-                for (let i = 0; i < entries.length; i++){
-                    const valItemDiv = document.createElement('div');
-                    valItemDiv.textContent = entries[i];
-                    cellDiv.appendChild(valItemDiv);
+                    
+                                    
+                    const localInfluence = [];
+                    influencedMethods.forEach((influence, methodRaw) => {
+                        const entries = methodRaw.split(".");
+                        const method = (entries[entries.length - 2]) + "." + (entries[entries.length - 1]) + '(...)'; 
+                        localInfluence.push({methods: method, influence: influence});
+                    });
+                    localInfluenceTable.setData(localInfluence);
                 }
-                return cellDiv;
-            }
-                                
-            function viewPerfModel() {                    
-                const config = document.getElementById("configSelect").value;
-                perfModelTable.setData(names2PerfModels[config]);
-                
-                const configSelected = names2Configs[config];
-                const configValues = new Map();
-                for (let i = 0; i < configSelected.length; i++) {
-                    configValues.set(configSelected[i].option, configSelected[i].value);
+                function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
+                    let one = a.replace("+","");
+                    one = one.replace("-","");
+                    let two = b.replace("+","");
+                    two = two.replace("-","");
+                    return (+one) - (+two);
                 }
-                
-                let time = defaultExecutionTime;
-                rawPerfModel.forEach(entry => {
-                    const selections = new Map();
-                    entry.options.forEach(option => {
-                        const value = configValues.get(option.option);
-                        selections.set(option.option, value);
-                    });
-
-                    let sameValues = true;
-                    entry.options.forEach(option => {
-                        const selection = selections.get(option.option);
-                        if (option.to !== selection) {
-                            sameValues = false;
-                        }
-                    });
-                    if(sameValues) {
-                        const influence = +entry.influence;
-                        if(entry.sign === '+') {
-                            time += influence;
-                        }
-                        else {
-                            time -= influence;
-                        }
+                function customFormatter(cell, formatterParams, onRendered) {
+                    const val = cell.getValue();
+                    const entries = val.split(",");
+                    const cellDiv = document.createElement('div');
+                    for (let i = 0; i < entries.length; i++){
+                        const valItemDiv = document.createElement('div');
+                        valItemDiv.textContent = entries[i];
+                        cellDiv.appendChild(valItemDiv);
                     }
-                });
+                    return cellDiv;
+                }
+                                    
+                function viewPerfModel() {                    
+                    const config = document.getElementById("configSelect").value;
+                    perfModelTable.setData(names2PerfModels[config]);
+                    
+                    const configSelected = names2Configs[config];
+                    const configValues = new Map();
+                    for (let i = 0; i < configSelected.length; i++) {
+                        configValues.set(configSelected[i].option, configSelected[i].value);
+                    }
+                    
+                    let time = defaultExecutionTime;
+                    rawPerfModel.forEach(entry => {
+                        const selections = new Map();
+                        entry.options.forEach(option => {
+                            const value = configValues.get(option.option);
+                            selections.set(option.option, value);
+                        });
+    
+                        let sameValues = true;
+                        entry.options.forEach(option => {
+                            const selection = selections.get(option.option);
+                            if (option.to !== selection) {
+                                sameValues = false;
+                            }
+                        });
+                        if(sameValues) {
+                            const influence = +entry.influence;
+                            if(entry.sign === '+') {
+                                time += influence;
+                            }
+                            else {
+                                time -= influence;
+                            }
+                        }
+                    });
                 
                 document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
             }
             viewPerfModel();
-        
-            // (function () {    
+                
+                
+                
             //     const optionsToSelect = [{selectedConfig}];
             //     if(optionsToSelect.length > 0) {
             //         const selectedOptions = new Set();
@@ -1430,7 +1400,6 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             //        row.deselect();
             //     });
             //
-            //     const vscode = acquireVsCodeApi();
             //
             //     // document.getElementById("view-influence-trigger").addEventListener("click", function(){
             //     //     const config = document.getElementById("configSelect").value;                 
@@ -1460,7 +1429,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             //             command: 'localInfluence'
             //         });
             //     });
-            // }())
+            }())
         </script>
     </body>
     </html>`;
