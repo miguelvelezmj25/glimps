@@ -1118,32 +1118,102 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             names2PerfModels = names2PerfModels.concat(sameValues ? (entry.sign === '+') ? '-' : '+' : entry.sign);
             names2PerfModels = names2PerfModels.concat(entry.influence);
             names2PerfModels = names2PerfModels.concat('"}, ');
-            console.log();
         });
         names2PerfModels = names2PerfModels.concat('],');
     }
     names2PerfModels = names2PerfModels.concat('}');
 
-    let regions2Options = '[';
-    methods2ModelsRaw.forEach((entry: any) => {
-        regions2Options = regions2Options.concat('{ region: "');
-        regions2Options = regions2Options.concat(entry.method);
-        regions2Options = regions2Options.concat('", options: [');
-        const options = new Set<string>();
-        entry.model.forEach((term: string[]) => {
-            const optionsRaw = term[0].split(',');
-            optionsRaw.forEach((optionRaw: string) => {
-                options.add(optionRaw.split(' ')[0]);
+    let names2LocalModels = '{';
+    for (let i = 0; i < names2ConfigsRaw.length; i++) {
+        names2LocalModels = names2LocalModels.concat('"');
+        names2LocalModels = names2LocalModels.concat(names2ConfigsRaw[i].config);
+        names2LocalModels = names2LocalModels.concat('": ');
+        const config = new Map<string, string>();
+        for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
+            config.set(names2ConfigsRaw[i].value[j][0], names2ConfigsRaw[i].value[j][1]);
+        }
+        names2LocalModels = names2LocalModels.concat('[');
+        methods2ModelsRaw.forEach((localModelRaw: any) => {
+            names2LocalModels = names2LocalModels.concat('{ method : "');
+            names2LocalModels = names2LocalModels.concat(localModelRaw.method);
+            names2LocalModels = names2LocalModels.concat('", model: ');
+
+            const localModel = getPerfModel(localModelRaw.model);
+            const localModelEval = eval(localModel);
+            names2LocalModels = names2LocalModels.concat('[');
+            localModelEval.forEach((entry: any) => {
+                const selections = new Map<string, any>();
+                entry.options.forEach((option: any) => {
+                    const value = config.get(option.option);
+                    selections.set(option.option, value);
+                });
+                let sameValues = true;
+                entry.options.forEach((option: any) => {
+                    const selection = selections.get(option.option);
+                    if (option.to !== selection) {
+                        sameValues = false;
+                    }
+                });
+                names2LocalModels = names2LocalModels.concat('{ option : "');
+                entry.options.forEach((option: any) => {
+                    names2LocalModels = names2LocalModels.concat(option.option);
+                    names2LocalModels = names2LocalModels.concat(" (");
+                    names2LocalModels = names2LocalModels.concat(sameValues ? option.to : option.from);
+                    names2LocalModels = names2LocalModels.concat(" --> ");
+                    names2LocalModels = names2LocalModels.concat(sameValues ? option.from : option.to);
+                    names2LocalModels = names2LocalModels.concat('),');
+                });
+                names2LocalModels = names2LocalModels.concat('", influence: "');
+                names2LocalModels = names2LocalModels.concat(sameValues ? (entry.sign === '+') ? '-' : '+' : entry.sign);
+                names2LocalModels = names2LocalModels.concat(entry.influence);
+                names2LocalModels = names2LocalModels.concat('"}, ');
             });
+            names2LocalModels = names2LocalModels.concat(']}, ');
         });
-        options.forEach((option: string) => {
-            regions2Options = regions2Options.concat('"');
-            regions2Options = regions2Options.concat(option);
-            regions2Options = regions2Options.concat('",');
-        });
-        regions2Options = regions2Options.concat(']},');
-    });
-    regions2Options = regions2Options.concat(']');
+        names2LocalModels = names2LocalModels.concat('],');
+    }
+    names2LocalModels = names2LocalModels.concat('}');
+
+    // let regions2Options = '[';
+    // methods2ModelsRaw.forEach((entry: any) => {
+    //     regions2Options = regions2Options.concat('{ region: "');
+    //     regions2Options = regions2Options.concat(entry.method);
+    //     regions2Options = regions2Options.concat('", options: [');
+    //     const options = new Set<string>();
+    //     entry.model.forEach((term: string[]) => {
+    //         const optionsRaw = term[0].split(',');
+    //         optionsRaw.forEach((optionRaw: string) => {
+    //             options.add(optionRaw.split(' ')[0]);
+    //         });
+    //     });
+    //     options.forEach((option: string) => {
+    //         regions2Options = regions2Options.concat('"');
+    //         regions2Options = regions2Options.concat(option);
+    //         regions2Options = regions2Options.concat('",');
+    //     });
+    //     const optionsToInfluence = new Map<string[], string>();
+    //     entry.model.forEach((term: string[]) => {
+    //         const terms: string[] = [];
+    //         term[0].split(',').forEach((optionRaw: string) => {
+    //             terms.push(optionRaw.split(' ')[0]);
+    //         });
+    //         optionsToInfluence.set(terms, term[1]);
+    //     });
+    //     regions2Options = regions2Options.concat('], influence: [');
+    //     optionsToInfluence.forEach((value: string, key: string[]) => {
+    //         regions2Options = regions2Options.concat('{ options: [');
+    //         key.forEach((option: string) => {
+    //             regions2Options = regions2Options.concat('"');
+    //             regions2Options = regions2Options.concat(option);
+    //             regions2Options = regions2Options.concat('", ');
+    //         });
+    //         regions2Options = regions2Options.concat('], value: "');
+    //         regions2Options = regions2Options.concat(value);
+    //         regions2Options = regions2Options.concat('" },');
+    //     });
+    //     regions2Options = regions2Options.concat(']},');
+    // });
+    // regions2Options = regions2Options.concat(']');
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -1161,12 +1231,12 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 ${configs}
             </select>
         </div>
-        <div style="display: inline; font-size: 14px;">comapre to: </div>
-        <div style="display: inline;">
-            <select name="compareSelect" id="compareSelect" onchange="viewPerfModel()">
-                ${configs}
-            </select>
-        </div>
+        <div style="display: inline; font-size: 14px;">compare to: TODO? </div>
+<!--        <div style="display: inline;">-->
+<!--            <select name="compareSelect" id="compareSelect" onchange="viewPerfModel()">-->
+<!--                            // {configs} -->
+<!--            </select>-->
+<!--        </div>-->
         <br>
         <br>
         <div id="selected-config-time" style="font-size: 14px;">Execution time:</div>
@@ -1186,8 +1256,8 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
             const defaultExecutionTime = ${defaultExecutionTime}.time;
             const rawPerfModel = ${perfModel}
             const names2PerfModels = ${names2PerfModels};
+            const names2LocalModels = ${names2LocalModels};
             const names2Configs = ${names2Configs};
-            const regions2Options = ${regions2Options};
             let selectedRow = undefined;
             
             const localInfluenceTable = new Tabulator("#localInfluence", {
@@ -1202,7 +1272,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 layout: "fitColumns",
                 selectable: true,
                 columns: [
-                    { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
+                    { title: "Options", field: "option", sorter: "string", formatter: customFormatter }, 
                     { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
                 ],
                 rowSelectionChanged:selectInfluence
@@ -1223,21 +1293,38 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     return;
                 }
                 
-                const influencedMethods = new Set();
-                selectedRow.getData().option.split(',').splice('', 1).forEach(optionRaw => {
-                   const option = optionRaw.split(' ')[0]
-                   regions2Options.forEach(entry => {
-                       if(entry.options.includes(option)) {
-                           influencedMethods.add(entry.region);
-                       }
-                   });
+                let selectedOptions = new Set();
+                selectedRow.getData().option.split(',').forEach(optionRaw => {
+                    if(optionRaw.length > 0) {
+                        selectedOptions.add(optionRaw.split(' ')[0]);
+                    }
+                });
+                selectedOptions = Array.from(selectedOptions);
+                
+                const influencedMethods = new Map();
+                const config = document.getElementById("configSelect").value;
+                names2LocalModels[config].forEach(localModel => {
+                    localModel.model.forEach(term => {
+                        let optionsInTerm = new Set();
+                        term.option.split(',').forEach(optionRaw => {
+                            if(optionRaw.length > 0) {
+                                optionsInTerm.add(optionRaw.split(' ')[0]);
+                            }
+                        });
+                        optionsInTerm = Array.from(optionsInTerm);
+                        
+                        if(selectedOptions.sort().join(',') === optionsInTerm.sort().join(',')) {
+                            influencedMethods.set(localModel.method, term.influence);
+                        }
+                    });
                 });
                 
+                                
                 const localInfluence = [];
-                influencedMethods.forEach(methodRaw => {
+                influencedMethods.forEach((influence, methodRaw) => {
                     const entries = methodRaw.split(".");
                     const method = (entries[entries.length - 2]) + "." + (entries[entries.length - 1]) + '(...)'; 
-                    localInfluence.push({methods: method});
+                    localInfluence.push({methods: method, influence: influence});
                 });
                 localInfluenceTable.setData(localInfluence);
             }
