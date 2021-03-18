@@ -28,7 +28,7 @@
       },
       {
         "command": "globalModel.start",
-        "title": "View Global Performance Influence",
+        "title": "View Options' Influence",
         "category": "Perf Debug"
       },
       {

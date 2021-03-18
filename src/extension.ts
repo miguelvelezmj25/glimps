@@ -185,7 +185,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
             </select>
         </div>
         <br>
-        <hr>
+<!--        <hr>-->
         <br>
         <div id="displayConfig"></div>
         <br>
@@ -201,8 +201,8 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <br>
         <hr>
         <br>
-        <div style="display: inline;"><button id="global-influence-trigger">View Global Performance Influence</button></div>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
+        <div style="display: inline;"><button id="global-influence-trigger">View Options' Influence</button></div>
+<!--        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>-->
         <br>
         <br>
         <br>
@@ -261,11 +261,11 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                     });
                 });
                 
-                document.getElementById("profile-config-trigger").addEventListener("click", function () {    
-                    vscode.postMessage({
-                        command: 'profile'
-                    });
-                });
+                // document.getElementById("profile-config-trigger").addEventListener("click", function () {    
+                //     vscode.postMessage({
+                //         command: 'profile'
+                //     });
+                // });
             }())
         </script>
     </body>
@@ -942,7 +942,7 @@ function _globalModel(context: vscode.ExtensionContext) {
     // Create and show a new webview
     globalModelPanel = vscode.window.createWebviewPanel(
         'globalModel', // Identifies the type of the webview. Used internally
-        'Global Performance Influence', // Title of the panel displayed to the user
+        'Options\' Influence', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -951,11 +951,14 @@ function _globalModel(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+
     const defaultConfig = parse(fs.readFileSync(path.join(dataDir, 'configs/default.csv'), 'utf8'));
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
+
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
-    let allConfigs = getAllConfigs(dataDir);
-    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, defaultConfig, 'default');
+    const allConfigs = getAllConfigs(dataDir);
+    const names2Configs = getNames2Configs(dataDir);
+    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, defaultConfig, 'default', names2Configs);
 
     globalModelPanel.webview.onDidReceiveMessage(
         message => {
@@ -1051,10 +1054,10 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
     </html>`;
 }
 
-function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: string[], rawConfigs: string[], defaultConfig: string[], rawConfig: string[], rawSelectedConfigName: string) {
+function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: string[], rawConfigs: string[], defaultConfig: string[], rawConfig: string[], rawSelectedConfigName: string, names2ConfigsRaw: any) {
     const selectedConfigName = "{ name: \"" + rawSelectedConfigName + "\" }";
-    const perfModel = getPerfModel(rawPerfModel);
     const selectedConfig = getSelectedConfig(defaultConfig, rawConfig);
+
     let configs = "";
     for (const config of rawConfigs) {
         configs = configs.concat("<option value=\"");
@@ -1063,6 +1066,51 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         configs = configs.concat(config);
         configs = configs.concat("</option>");
     }
+
+    const perfModel = getPerfModel(rawPerfModel);
+    const perfModelEval = eval(perfModel);
+    let names2PerfModels = '{';
+    for (let i = 0; i < names2ConfigsRaw.length; i++) {
+        names2PerfModels = names2PerfModels.concat('"');
+        names2PerfModels = names2PerfModels.concat(names2ConfigsRaw[i].config);
+        names2PerfModels = names2PerfModels.concat('": ');
+        const config = new Map<string, string>();
+        for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
+            config.set(names2ConfigsRaw[i].value[j][0], names2ConfigsRaw[i].value[j][1]);
+        }
+        names2PerfModels = names2PerfModels.concat('[');
+        perfModelEval.forEach((entry: any) => {
+            const selections = new Map<string, any>();
+            entry.options.forEach((option: any) => {
+                const value = config.get(option.option);
+                selections.set(option.option, value);
+            });
+            let sameValues = true;
+            entry.options.forEach((option: any) => {
+                const selection = selections.get(option.option);
+                console.log(selection);
+                if (option.to !== selection) {
+                    sameValues = false;
+                }
+            });
+            names2PerfModels = names2PerfModels.concat('{ option : "');
+            entry.options.forEach((option: any) => {
+                names2PerfModels = names2PerfModels.concat(option.option);
+                names2PerfModels = names2PerfModels.concat(" (");
+                names2PerfModels = names2PerfModels.concat(sameValues ? option.to : option.from);
+                names2PerfModels = names2PerfModels.concat(" --> ");
+                names2PerfModels = names2PerfModels.concat(sameValues ? option.from : option.to);
+                names2PerfModels = names2PerfModels.concat('),');
+            });
+            names2PerfModels = names2PerfModels.concat('", influence: "');
+            names2PerfModels = names2PerfModels.concat(sameValues ? (entry.sign === '+') ? '-' : '+' : entry.sign);
+            names2PerfModels = names2PerfModels.concat(entry.influence);
+            names2PerfModels = names2PerfModels.concat('"}, ');
+            console.log();
+        });
+        names2PerfModels = names2PerfModels.concat('],');
+    }
+    names2PerfModels = names2PerfModels.concat('}');
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -1076,19 +1124,19 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
     <body>
         <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
-            <select name="configSelect" id="configSelect" onchange="something()">
+            <select name="configSelect" id="configSelect" onchange="viewPerfModel()">
                 ${configs}
             </select>
         </div>
-        <div style="display: inline;"><button id="view-influence-trigger">View Influence</button></div>
+        <div style="display: inline; font-size: 14px;">comapre to: </div>
+        <div style="display: inline;">
+            <select name="compareSelect" id="compareSelect" onchange="viewPerfModel()">
+                ${configs}
+            </select>
+        </div>
         <br>
-        <hr>
         <br>
-        <br>
-        <div style="display: inline; font-size: 14px;" id="selected-config-name"><b>Selected configuration:</b> default</div>
         <div id="selected-config-time" style="font-size: 14px;">Execution time:</div>
-        <br>
-        <div id="defaultExecutionTime" style="font-size: 14px;"><b>Default execution time:</b> ${defaultExecutionTime}</div>
         <br>
         <div id="perfModel"></div>
         <br>
@@ -1096,116 +1144,117 @@ function getGlobalModelContent(defaultExecutionTime: string, rawPerfModel: strin
         <br>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
-        <script type="text/javascript">
-            function something() {                    
-                console.log('something');
+        <script type="text/javascript">   
+            const names2PerfModels = ${names2PerfModels};
+          
+            const perfModelTable = new Tabulator("#perfModel", {
+                layout: "fitColumns",
+                columns: [
+                    { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
+                    { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                ],
+            });
+            
+            function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
+                let one = a.replace("+","");
+                one = one.replace("-","");
+                let two = b.replace("+","");
+                two = two.replace("-","");
+                return (+one) - (+two);
             }
-            something();
+            
+            function customFormatter(cell, formatterParams, onRendered) {
+                const val = cell.getValue();
+                const entries = val.split(",");
+                const cellDiv = document.createElement('div');
+                for (let i = 0; i < entries.length; i++){
+                    const valItemDiv = document.createElement('div');
+                    valItemDiv.textContent = entries[i];
+                    cellDiv.appendChild(valItemDiv);
+                }
+                return cellDiv;
+            }
         
-            (function () {    
-                const perfModelData = [${perfModel}];        
-                const perfModelTable = new Tabulator("#perfModel", {
-                    data: perfModelData,
-                    layout: "fitColumns",
-                    columns: [
-                        { title: "Option", field: "option", sorter: "string", formatter: customFormatter }, 
-                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
-                    ],
-                });
-                
-                const optionsToSelect = [${selectedConfig}];
-                if(optionsToSelect.length > 0) {
-                    const selectedOptions = new Set();
-                    optionsToSelect.forEach(entry => {
-                        selectedOptions.add(entry.option);
-                    });
-                                    
-                    const rowsToSelect = perfModelTable.getRows().filter(row => {
-                        const options = new Set(); 
-                        row.getData().option.split(",").forEach(entry => {
-                            options.add(entry.split(" ")[0]);
-                        })
-                        return subset(options, selectedOptions);
-                    });
-                    rowsToSelect.forEach(row => row.select());
-                }
-                
-                let time = +document.getElementById("defaultExecutionTime").textContent.split(" ")[3];
-                const selectedRows = perfModelTable.getRows().filter(row => row.isSelected());              
-                selectedRows.forEach(row => {
-                    let influenceStr = row.getData().influence;
-                    let influence = influenceStr.replace("+","");
-                    influence = +influence.replace("-","");
-                    if(influenceStr.includes('+')) {
-                        time += influence;
-                    }
-                    else {
-                        time -= influence;
-                    }
-                });
-                document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + ${selectedConfigName}.name;
-                document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
-                
-                perfModelTable.getRows().forEach(row => {
-                   if(!selectedRows.includes(row)) {
-                       row.delete();
-                   } 
-                });
-                perfModelTable.getRows().forEach(row => {
-                   row.deselect();
-                });
-            
-                const vscode = acquireVsCodeApi();
-            
-                document.getElementById("view-influence-trigger").addEventListener("click", function(){
-                    const config = document.getElementById("configSelect").value;                 
-                    vscode.postMessage({
-                        command: 'viewGlobalInfluence',
-                        config: config
-                    });
-                });
-                
-                function subset(subset, set) {
-                    for(let elem of subset) {
-                        if(!set.has(elem)) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-                               
-                function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
-                    let one = a.replace("+","");
-                    one = one.replace("-","");
-                    let two = b.replace("+","");
-                    two = two.replace("-","");
-                    return (+one) - (+two);
-                }
-                
-                function customFormatter(cell, formatterParams, onRendered) {
-                    const val = cell.getValue();
-                    const entries = val.split(",");
-                    const cellDiv = document.createElement('div');
-                    for (let i = 0; i < entries.length; i++){
-                        const valItemDiv = document.createElement('div');
-                        valItemDiv.textContent = entries[i];
-                        cellDiv.appendChild(valItemDiv);
-                    }
-                    return cellDiv;
-                }
-                
-                document.getElementById("profile-config-trigger").addEventListener("click", function () {    
-                    vscode.postMessage({
-                        command: 'profile'
-                    });
-                });
-                
-                document.getElementById("local-influence-trigger").addEventListener("click", function () {    
-                    vscode.postMessage({
-                        command: 'localInfluence'
-                    });
-                });
-            }())
+            function viewPerfModel() {                    
+                const config = document.getElementById("configSelect").value;
+                perfModelTable.setData(names2PerfModels[config]);
+            }
+            viewPerfModel();
+        
+            // (function () {    
+            //     const optionsToSelect = [${selectedConfig}];
+            //     if(optionsToSelect.length > 0) {
+            //         const selectedOptions = new Set();
+            //         optionsToSelect.forEach(entry => {
+            //             selectedOptions.add(entry.option);
+            //         });
+            //                        
+            //         const rowsToSelect = perfModelTable.getRows().filter(row => {
+            //             const options = new Set(); 
+            //             row.getData().option.split(",").forEach(entry => {
+            //                 options.add(entry.split(" ")[0]);
+            //             })
+            //             return subset(options, selectedOptions);
+            //         });
+            //         rowsToSelect.forEach(row => row.select());
+            //     }
+            //    
+            //     let time = +document.getElementById("defaultExecutionTime").textContent.split(" ")[3];
+            //     const selectedRows = perfModelTable.getRows().filter(row => row.isSelected());              
+            //     selectedRows.forEach(row => {
+            //         let influenceStr = row.getData().influence;
+            //         let influence = influenceStr.replace("+","");
+            //         influence = +influence.replace("-","");
+            //         if(influenceStr.includes('+')) {
+            //             time += influence;
+            //         }
+            //         else {
+            //             time -= influence;
+            //         }
+            //     });
+            //     document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + ${selectedConfigName}.name;
+            //     document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
+            //    
+            //     perfModelTable.getRows().forEach(row => {
+            //        if(!selectedRows.includes(row)) {
+            //            row.delete();
+            //        } 
+            //     });
+            //     perfModelTable.getRows().forEach(row => {
+            //        row.deselect();
+            //     });
+            //
+            //     const vscode = acquireVsCodeApi();
+            //
+            //     // document.getElementById("view-influence-trigger").addEventListener("click", function(){
+            //     //     const config = document.getElementById("configSelect").value;                 
+            //     //     vscode.postMessage({
+            //     //         command: 'viewGlobalInfluence',
+            //     //         config: config
+            //     //     });
+            //     // });
+            //    
+            //     function subset(subset, set) {
+            //         for(let elem of subset) {
+            //             if(!set.has(elem)) {
+            //                 return false;
+            //             }
+            //         }
+            //         return true;
+            //     }
+            //                                   
+            //     document.getElementById("profile-config-trigger").addEventListener("click", function () {    
+            //         vscode.postMessage({
+            //             command: 'profile'
+            //         });
+            //     });
+            //    
+            //     document.getElementById("local-influence-trigger").addEventListener("click", function () {    
+            //         vscode.postMessage({
+            //             command: 'localInfluence'
+            //         });
+            //     });
+            // }())
         </script>
     </body>
     </html>`;
@@ -1224,16 +1273,41 @@ function getConfig(rawDefaultConfig: string[]) {
 }
 
 function getPerfModel(rawPerfModel: string[]) {
-    let result = "";
-    rawPerfModel.forEach((entry) => {
-        result = result.concat("{ option: \"");
-        result = result.concat(entry[0]);
-        result = result.concat("\", influence: \"");
-        result = result.concat(entry[1]);
-        result = result.concat("\" }, ");
-    });
-    return result;
+    let perfModel = "[";
+    for (let i = 0; i < rawPerfModel.length; i++) {
+        perfModel = perfModel.concat(' { "options": [');
+        const optionsRaw = rawPerfModel[i][0];
+        const options = optionsRaw.split(",");
+        for (let j = 0; j < options.length; j++) {
+            perfModel = perfModel.concat('{ "option": "');
+            const optionRaw = options[j];
+            perfModel = perfModel.concat(optionRaw.substring(0, optionRaw.indexOf("(")));
+            perfModel = perfModel.concat('", "from": "');
+            perfModel = perfModel.concat(optionRaw.substring(optionRaw.indexOf("(") + 1, optionRaw.indexOf("-")));
+            perfModel = perfModel.concat('", "to": "');
+            perfModel = perfModel.concat(optionRaw.substring(optionRaw.indexOf("-") + 1, optionRaw.indexOf(")")));
+            perfModel = perfModel.concat('"}, ');
+        }
+        perfModel = perfModel.concat('], "sign": "');
+        perfModel = perfModel.concat(rawPerfModel[i][1]);
+        perfModel = perfModel.concat('", "influence": "');
+        perfModel = perfModel.concat(rawPerfModel[i][2]);
+        perfModel = perfModel.concat('" },');
+    }
+    return perfModel.concat("]");
 }
+
+// function getPerfModel(rawPerfModel: string[]) {
+//     let result = "";
+//     rawPerfModel.forEach((entry) => {
+//         result = result.concat("{ option: \"");
+//         result = result.concat(entry[0]);
+//         result = result.concat("\", influence: \"");
+//         result = result.concat(entry[1]);
+//         result = result.concat("\" }, ");
+//     });
+//     return result;
+// }
 
 function getSelectedConfig(defaultConfig: string[], rawConfig: string[]) {
     let selected: string[] = [];
