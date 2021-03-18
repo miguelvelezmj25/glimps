@@ -17,6 +17,9 @@ let style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecor
 let filesToHighlight = new Map<String, Set<String>>();
 let sliceConnections = '';
 
+let configToProfile: string = '';
+let configToCompare: string = '';
+
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
 let localModelPanel: vscode.WebviewPanel | undefined = undefined;
 let profilePanel: vscode.WebviewPanel | undefined = undefined;
@@ -725,13 +728,34 @@ function _perfProfiles(context: vscode.ExtensionContext) {
 }
 
 function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: string, hotspotDiffData: string) {
-    let configs = "";
+    let leftConfigs = "";
     for (const config of rawConfigs) {
-        configs = configs.concat("<option value=\"");
-        configs = configs.concat(config);
-        configs = configs.concat("\">");
-        configs = configs.concat(config);
-        configs = configs.concat("</option>");
+        leftConfigs = leftConfigs.concat("<option value=\"");
+        leftConfigs = leftConfigs.concat(config);
+        leftConfigs = leftConfigs.concat('" ');
+        leftConfigs = leftConfigs.concat(config === configToProfile ? 'selected="selected"' : '');
+        leftConfigs = leftConfigs.concat(">");
+        leftConfigs = leftConfigs.concat(config);
+        leftConfigs = leftConfigs.concat("</option>");
+    }
+
+    let rightConfigs = "";
+    for (const config of rawConfigs) {
+        rightConfigs = rightConfigs.concat("<option value=\"");
+        rightConfigs = rightConfigs.concat(config);
+        rightConfigs = rightConfigs.concat('" ');
+        let x = '';
+        if (configToCompare.length === 0) {
+            if (config !== configToProfile) {
+                x = 'selected="selected"';
+            }
+        } else if (config === configToProfile) {
+            x = 'selected="selected"';
+        }
+        rightConfigs = rightConfigs.concat(x);
+        rightConfigs = rightConfigs.concat(">");
+        rightConfigs = rightConfigs.concat(config);
+        rightConfigs = rightConfigs.concat("</option>");
     }
 
     return `<!DOCTYPE html>
@@ -744,15 +768,18 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
-        <div ><b>Select configurations:</b></div>
-        <div style="display: inline">
-            <select name="config-select" id="config-select" size='2' multiple="multiple">
-                ${configs}
+        <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
+        <div style="display: inline;">
+            <select name="configSelect" id="configSelect">
+                ${leftConfigs}
             </select>
         </div>
-        <div style="display: inline"><button id="hotspot-trigger">View Hotspots</button></div>
-        <br>
-        <hr>
+        <div style="display: inline; font-size: 14px;">compare to: </div>
+        <div style="display: inline;">
+            <select name="compareSelect" id="compareSelect">
+                ${rightConfigs}
+            </select>
+        </div>
         <br>
         <br>
         <div id="hotspot-diff-table"></div>
@@ -760,7 +787,10 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         <hr>
         <br>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
-        <script type="text/javascript">                                       
+        <script type="text/javascript">         
+            const configToProfile = document.getElementById("configSelect").value;
+            const configToCompare = document.getElementById("compareSelect").value;
+                                      
             const hotspotDiffData = [${hotspotDiffData}];      
             const table = new Tabulator("#hotspot-diff-table", {
                 data: hotspotDiffData,
@@ -770,18 +800,18 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
                 rowFormatter: customRowFormatter,
                 columns: [
                     {title: "Hot Spot", field: "method", sorter: "string"},
-                    {title: "${config1}", field: "config1", sorter: "number", hozAlign: "right"},
-                    {title: "${config2}", field: "config2", sorter: "number", hozAlign: "right"}
+                    {title: configToProfile, field: "config1", sorter: "number", hozAlign: "right"},
+                    {title: configToCompare, field: "config2", sorter: "number", hozAlign: "right"}
                 ],
             }); 
             
-            if(table.getColumn("config1").getDefinition().title === "Config1" || table.getColumn("config2").getDefinition().title === "Config2") {
-                table.getColumn("config1").delete();
-                table.getColumn("config2").delete();
-            }
-            else if(table.getColumn("config1").getDefinition().title === table.getColumn("config2").getDefinition().title) {
-                table.getColumn("config2").delete();
-            }
+            // if(table.getColumn("config1").getDefinition().title === "Config1" || table.getColumn("config2").getDefinition().title === "Config2") {
+            //     table.getColumn("config1").delete();
+            //     table.getColumn("config2").delete();
+            // }
+            // else if(table.getColumn("config1").getDefinition().title === table.getColumn("config2").getDefinition().title) {
+            //     table.getColumn("config2").delete();
+            // }
             
             function customRowFormatter(row) {
                 const rowData = row.getData();
@@ -808,27 +838,27 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
             (function () {
                 const vscode = acquireVsCodeApi();
                 
-                document.getElementById("local-influence-trigger").addEventListener("click", function () {    
-                    vscode.postMessage({
-                        command: 'localInfluence'
-                    });
-                });
-                
-                document.getElementById("hotspot-trigger").addEventListener("click", function () {
-                    const configs = [];
-                    for (const option of document.getElementById('config-select').options) {
-                        if (option.selected) {
-                            configs.push(option.value);
-                        }
-                    }
-                    if(configs.length === 0) {
-                        return;
-                    }
-                    vscode.postMessage({
-                        command: 'diff',
-                        configs: configs
-                    });
-                });
+                // document.getElementById("local-influence-trigger").addEventListener("click", function () {    
+                //     vscode.postMessage({
+                //         command: 'localInfluence'
+                //     });
+                // });
+                //
+                // document.getElementById("hotspot-trigger").addEventListener("click", function () {
+                //     const configs = [];
+                //     for (const option of document.getElementById('config-select').options) {
+                //         if (option.selected) {
+                //             configs.push(option.value);
+                //         }
+                //     }
+                //     if(configs.length === 0) {
+                //         return;
+                //     }
+                //     vscode.postMessage({
+                //         command: 'diff',
+                //         configs: configs
+                //     });
+                // });
             }())
         </script>
     </body>
@@ -963,17 +993,7 @@ function _globalModel(context: vscode.ExtensionContext) {
     globalModelPanel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
-                // case 'viewGlobalInfluence' :
-                //     if (!globalModelPanel) {
-                //         return;
-                //     }
-                //     const config = message.config;
-                //     const configData = parse(fs.readFileSync(path.join(dataDir, 'configs/' + config + '.csv'), 'utf8'));
-                //     allConfigs = getAllConfigs(dataDir);
-                //     globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, defaultConfig, configData, config);
-                //     return;
                 case 'open-region' :
-                    console.log(message);
                     const fileData = message.method.split(".");
                     let className = '';
                     for (let i = 0; i < (fileData.length - 1); i++) {
@@ -983,8 +1003,6 @@ function _globalModel(context: vscode.ExtensionContext) {
                         }
                     }
                     const method = fileData[fileData.length - 1];
-                    console.log((className));
-                    console.log(method);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     vscode.workspace.openTextDocument(uri).then(doc => {
                         vscode.window.showTextDocument(doc, vscode.ViewColumn.One)
@@ -1020,19 +1038,13 @@ function _globalModel(context: vscode.ExtensionContext) {
                                     });
                             });
                     });
-                    return;
-                case 'profile' :
+                    //     return;
+                    // case 'profile' :
+                    configToProfile = message.config;
                     if (profilePanel) {
                         profilePanel.reveal();
                     } else {
                         vscode.commands.executeCommand('perfProfiles.start');
-                    }
-                    return;
-                case 'localInfluence' :
-                    if (localModelPanel) {
-                        localModelPanel.reveal();
-                    } else {
-                        vscode.commands.executeCommand('localModels.start');
                     }
                     return;
             }
@@ -1237,13 +1249,13 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     <body>
         <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
-            <select name="configSelect" id="configSelect"">
+            <select name="configSelect" id="configSelect">
                 ${configs}
             </select>
         </div>
         <div style="display: inline; font-size: 14px;">compare to: TODO? </div>
 <!--        <div style="display: inline;">-->
-<!--            <select name="compareSelect" id="compareSelect"">-->
+<!--            <select name="compareSelect" id="compareSelect">-->
 <!--                            // {configs} -->
 <!--            </select>-->
 <!--        </div>-->
@@ -1258,10 +1270,9 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
         <br>
         <div id="localInfluence"></div>
         <br>
-        <hr>
-        <br>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
-        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
+<!--        <hr>-->
+<!--        <br>-->
+<!--        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>-->
         <script type="text/javascript">          
             (function () {    
                 const vscode = acquireVsCodeApi();
@@ -1286,7 +1297,8 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     const file = row.getData().method;
                     vscode.postMessage({
                         command: 'open-region',
-                        method: file
+                        method: file,
+                        config: document.getElementById("configSelect").value
                     });
                 }
                                       
@@ -1405,87 +1417,19 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                         }
                     });
                 
-                document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
-            }
-            viewPerfModel();
-                
-            document.getElementById("configSelect").addEventListener("change", () => {
+                    document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
+                }
                 viewPerfModel();
-            });
-                
-                
-                
-            //     const optionsToSelect = [{selectedConfig}];
-            //     if(optionsToSelect.length > 0) {
-            //         const selectedOptions = new Set();
-            //         optionsToSelect.forEach(entry => {
-            //             selectedOptions.add(entry.option);
-            //         });
-            //                        
-            //         const rowsToSelect = perfModelTable.getRows().filter(row => {
-            //             const options = new Set(); 
-            //             row.getData().option.split(",").forEach(entry => {
-            //                 options.add(entry.split(" ")[0]);
-            //             })
-            //             return subset(options, selectedOptions);
-            //         });
-            //         rowsToSelect.forEach(row => row.select());
-            //     }
-            //    
-            //     let time = +document.getElementById("defaultExecutionTime").textContent.split(" ")[3];
-            //     const selectedRows = perfModelTable.getRows().filter(row => row.isSelected());              
-            //     selectedRows.forEach(row => {
-            //         let influenceStr = row.getData().influence;
-            //         let influence = influenceStr.replace("+","");
-            //         influence = +influence.replace("-","");
-            //         if(influenceStr.includes('+')) {
-            //             time += influence;
-            //         }
-            //         else {
-            //             time -= influence;
-            //         }
-            //     });
-            //     document.getElementById("selected-config-name").innerHTML = "<b>Selected configuration:</b> " + {selectedConfigName}.name;
-            //     document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
-            //    
-            //     perfModelTable.getRows().forEach(row => {
-            //        if(!selectedRows.includes(row)) {
-            //            row.delete();
-            //        } 
-            //     });
-            //     perfModelTable.getRows().forEach(row => {
-            //        row.deselect();
-            //     });
-            //
-            //
-            //     // document.getElementById("view-influence-trigger").addEventListener("click", function(){
-            //     //     const config = document.getElementById("configSelect").value;                 
-            //     //     vscode.postMessage({
-            //     //         command: 'viewGlobalInfluence',
-            //     //         config: config
-            //     //     });
-            //     // });
-            //    
-            //     function subset(subset, set) {
-            //         for(let elem of subset) {
-            //             if(!set.has(elem)) {
-            //                 return false;
-            //             }
-            //         }
-            //         return true;
-            //     }
-            //                                   
-            //     document.getElementById("profile-config-trigger").addEventListener("click", function () {    
-            //         vscode.postMessage({
-            //             command: 'profile'
-            //         });
-            //     });
-            //    
-            //     document.getElementById("local-influence-trigger").addEventListener("click", function () {    
-            //         vscode.postMessage({
-            //             command: 'localInfluence'
-            //         });
-            //     });
+                    
+                document.getElementById("configSelect").addEventListener("change", () => {
+                    viewPerfModel();
+                });
+            
+                // document.getElementById("profile-config-trigger").addEventListener("click", function () {    
+                //     vscode.postMessage({
+                //         command: 'profile'
+                //     });
+                // });
             }())
         </script>
     </body>
