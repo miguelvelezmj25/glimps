@@ -141,7 +141,9 @@ function getConfigs(rawConfigs: string[]) {
     for (const config of rawConfigs) {
         configs = configs.concat("<option value=\"");
         configs = configs.concat(config);
-        configs = configs.concat("\">");
+        configs = configs.concat('" ');
+        configs = configs.concat(config === CONFIG_TO_PROFILE ? 'selected="selected"' : '');
+        configs = configs.concat(">");
         configs = configs.concat(config);
         configs = configs.concat("</option>");
     }
@@ -685,11 +687,19 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     const response = JSON.parse(res.getBody() + "");
                     profilePanel.webview.postMessage({response: response.data});
                     return;
-                case 'localInfluence' :
-                    if (localModelPanel) {
-                        localModelPanel.reveal();
+                // case 'localInfluence' :
+                //     if (localModelPanel) {
+                //         localModelPanel.reveal();
+                //     } else {
+                //         vscode.commands.executeCommand('localModels.start');
+                //     }
+                //     return;
+                case 'open-influence' :
+                    CONFIG_TO_PROFILE = message.config;
+                    if (globalModelPanel) {
+                        globalModelPanel.reveal();
                     } else {
-                        vscode.commands.executeCommand('localModels.start');
+                        vscode.commands.executeCommand('globalModel.start');
                     }
                     return;
                 case 'open-hotspot' :
@@ -760,16 +770,7 @@ function openFileAndNavigate(uri: vscode.Uri, method: string) {
 }
 
 function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
-    let leftConfigs = "";
-    for (const config of rawConfigs) {
-        leftConfigs = leftConfigs.concat("<option value=\"");
-        leftConfigs = leftConfigs.concat(config);
-        leftConfigs = leftConfigs.concat('" ');
-        leftConfigs = leftConfigs.concat(config === CONFIG_TO_PROFILE ? 'selected="selected"' : '');
-        leftConfigs = leftConfigs.concat(">");
-        leftConfigs = leftConfigs.concat(config);
-        leftConfigs = leftConfigs.concat("</option>");
-    }
+    const leftConfigs = getConfigs(rawConfigs);
 
     let rightConfigs = "";
     for (const config of rawConfigs) {
@@ -841,12 +842,20 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 
                 const influencingOptionsTable = new Tabulator("#influencingOptions", {
                     layout: "fitColumns",
-                    selectable: true,
+                    rowClick: openInfluence,
                     columns: [
                         { title: "Options", field: "option", sorter: "string", formatter: formatInteractions }, 
                         { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
                     ],
                 });
+                
+                function openInfluence(){
+                    vscode.postMessage({
+                        command: 'open-influence',
+                        config: document.getElementById("configSelect").value
+                    });
+                }
+                
                 function influenceSort(a, b) {
                     let one = a.replace("+","");
                     one = one.replace("-","");
@@ -854,6 +863,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     two = two.replace("-","");
                     return (+one) - (+two);
                 }
+                
                 function formatInteractions(cell) {
                     const val = cell.getValue();
                     const entries = val.split(",");
