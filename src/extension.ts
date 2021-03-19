@@ -878,10 +878,12 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         {title: "Hot Spot", field: "method", sorter: "string"},
                         {title: document.getElementById("configSelect").value, field: "config1", sorter: "number", hozAlign: "right"},
                         {title: document.getElementById("compareSelect").value, field: "config2", sorter: "number", hozAlign: "right"},
-                        {title: "hotspot", field: "hotspot"}
+                        {title: "hotspot", field: "hotspot"},
+                        {title: "methodLong", field: "methodLong"}
                     ],
                 }); 
                 table.hideColumn("hotspot");
+                table.hideColumn("methodLong");
                 
                 function formatBackground(row) {
                     const rowData = row.getData();
@@ -906,7 +908,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                 
                 function openFile(e, row){
-                    const file = row.getData().method;
+                    const file = row.getData().methodLong;
                     vscode.postMessage({
                         command: 'open-hotspot',
                         method: file,
@@ -933,7 +935,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     while(hotspotRow.getTreeParent() !== false) {
                         hotspotRow = hotspotRow.getTreeParent();
                     }
-                    let method = hotspotRow.getData().method;
+                    let method = hotspotRow.getData().methodLong;
                     method = method.substring(0, method.indexOf("("));
                     const config = document.getElementById("configSelect").value;
                     const models = names2LocalModels[config];
@@ -963,8 +965,11 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 
                 window.addEventListener('message', event => {
                     table.hideColumn("hotspot");
+                    table.hideColumn("methodLong");
                     table.deleteColumn("config1");
-                    table.deleteColumn("config2");
+                    if(table.getColumns().length === 4) {
+                        table.deleteColumn("config2");
+                    }
                     
                     const configToSelect = document.getElementById("configSelect").value;
                     const compareSelect = document.getElementById("compareSelect").value
