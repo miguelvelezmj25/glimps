@@ -660,7 +660,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     const sliceInfo = getSliceInfo(dataDir);
     const programName = sliceInfo.programName;
     let allConfigs = getAllConfigs(dataDir);
-    profilePanel.webview.html = getHotspotDiffContent(allConfigs, "Config1", "Config2", "{}");
+    profilePanel.webview.html = getHotspotDiffContent(allConfigs);
 
     const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
 
@@ -760,7 +760,7 @@ function openFileAndNavigate(uri: vscode.Uri, method: string) {
     });
 }
 
-function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: string, hotspotDiffData: string) {
+function getHotspotDiffContent(rawConfigs: string[]) {
     let leftConfigs = "";
     for (const config of rawConfigs) {
         leftConfigs = leftConfigs.concat("<option value=\"");
