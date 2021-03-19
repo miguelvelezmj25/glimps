@@ -399,40 +399,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     const className = message.method.substring(0, message.method.indexOf('\n')).replace(regex, '/');
                     const method = message.method.substring(message.method.indexOf('\n') + 1);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
-                    vscode.workspace.openTextDocument(uri).then(doc => {
-                        vscode.window.showTextDocument(doc, vscode.ViewColumn.One)
-                            .then(editor => {
-                                vscode.commands.executeCommand<DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', uri)
-                                    .then(syms => {
-                                        if (!syms || syms.length === 0) {
-                                            return;
-                                        }
-
-                                        let methods2Symbols = new Map<String, DocumentSymbol>();
-                                        for (const sym of syms) {
-                                            for (const child of sym.children) {
-                                                if (child.kind !== SymbolKind.Method && child.kind !== SymbolKind.Constructor) {
-                                                    continue;
-                                                }
-
-                                                let methodName = child.name;
-                                                methodName = methodName.substring(0, methodName.indexOf('('));
-                                                if (child.kind === SymbolKind.Constructor) {
-                                                    methodName = '<init>';
-                                                }
-                                                methods2Symbols.set(methodName, child);
-                                            }
-                                        }
-
-                                        const symbol = methods2Symbols.get(method);
-                                        if (!symbol) {
-                                            return;
-                                        }
-                                        editor.revealRange(symbol.range, TextEditorRevealType.Default);
-                                        editor.selection = new Selection(symbol.range.start, symbol.range.start);
-                                    });
-                            });
-                    });
+                    openFileAndNavigate(uri, method);
                     return;
                 case 'clear':
                     if (!slicingPanel) {
@@ -682,6 +649,8 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     let allConfigs = getAllConfigs(dataDir);
     profilePanel.webview.html = getHotspotDiffContent(allConfigs, "Config1", "Config2", "{}");
 
+    const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
+
     // Handle messages from the webview
     profilePanel.webview.onDidReceiveMessage(
         message => {
@@ -711,6 +680,21 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                         vscode.commands.executeCommand('localModels.start');
                     }
                     return;
+                case 'open-hotspot' :
+                    let methodData = message.method;
+                    methodData = methodData.substring(0, methodData.indexOf("("));
+                    const fileData = methodData.split(".");
+                    let className = '';
+                    for (let i = 0; i < (fileData.length - 1); i++) {
+                        className = className.concat(fileData[i]);
+                        if (i < (fileData.length - 2)) {
+                            className = className.concat("/");
+                        }
+                    }
+                    const method = fileData[fileData.length - 1];
+                    let uri = vscode.Uri.file(filesRoot + className + '.java');
+                    openFileAndNavigate(uri, method);
+                    return;
             }
         },
         undefined,
@@ -724,6 +708,43 @@ function _perfProfiles(context: vscode.ExtensionContext) {
         null,
         context.subscriptions
     );
+}
+
+function openFileAndNavigate(uri: vscode.Uri, method: string) {
+    vscode.workspace.openTextDocument(uri).then(doc => {
+        vscode.window.showTextDocument(doc, vscode.ViewColumn.One)
+            .then(editor => {
+                vscode.commands.executeCommand<DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', uri)
+                    .then(syms => {
+                        if (!syms || syms.length === 0) {
+                            return;
+                        }
+
+                        let methods2Symbols = new Map<String, DocumentSymbol>();
+                        for (const sym of syms) {
+                            for (const child of sym.children) {
+                                if (child.kind !== SymbolKind.Method && child.kind !== SymbolKind.Constructor) {
+                                    continue;
+                                }
+
+                                let methodName = child.name;
+                                methodName = methodName.substring(0, methodName.indexOf('('));
+                                if (child.kind === SymbolKind.Constructor) {
+                                    methodName = '<init>';
+                                }
+                                methods2Symbols.set(methodName, child);
+                            }
+                        }
+
+                        const symbol = methods2Symbols.get(method);
+                        if (!symbol) {
+                            return;
+                        }
+                        editor.revealRange(symbol.range, TextEditorRevealType.Default);
+                        editor.selection = new Selection(symbol.range.start, symbol.range.start);
+                    });
+            });
+    });
 }
 
 function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: string, hotspotDiffData: string) {
@@ -799,21 +820,20 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
                 document.getElementById("compareSelect").addEventListener("change", () => {
                     compareProfiles();
                 });
-                                          
-                // const hotspotDiffData = [{hotspotDiffData}];      
+                                               
                 const table = new Tabulator("#hotspot-diff-table", {
                     // data: hotspotDiffData,
                     dataTree:true,
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
                     rowFormatter: customRowFormatter,
+                    rowClick:openFile,
                     columns: [
                         {title: "Hot Spot", field: "method", sorter: "string"},
                         {title: configToProfile, field: "config1", sorter: "number", hozAlign: "right"},
                         {title: configToCompare, field: "config2", sorter: "number", hozAlign: "right"}
                     ],
                 }); 
-                                
                 function customRowFormatter(row) {
                     const rowData = row.getData();
                     const config1 = rowData.config1;
@@ -834,7 +854,14 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
                             row.getCells()[i].getElement().style.fontWeight = "bold";
                         }
                     } 
-                }   
+                }
+                function openFile(e, row){
+                    const file = row.getData().method;
+                    vscode.postMessage({
+                        command: 'open-hotspot',
+                        method: file,
+                    });
+                }
                 
                 // document.getElementById("local-influence-trigger").addEventListener("click", function () {    
                 //     vscode.postMessage({
@@ -856,6 +883,7 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
                 window.addEventListener('message', event => {
                     table.deleteColumn("config1");
                     table.deleteColumn("config2");
+                    console.log("TODO DELETE SECOND COLUMN IF THE SAME CONFIG WAS SELECTED");
                     table.addColumn({title:document.getElementById("configSelect").value, field:"config1"});
                     table.addColumn({title:document.getElementById("compareSelect").value, field:"config2"});
                     
@@ -1007,42 +1035,8 @@ function _globalModel(context: vscode.ExtensionContext) {
                     }
                     const method = fileData[fileData.length - 1];
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
-                    vscode.workspace.openTextDocument(uri).then(doc => {
-                        vscode.window.showTextDocument(doc, vscode.ViewColumn.One)
-                            .then(editor => {
-                                vscode.commands.executeCommand<DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', uri)
-                                    .then(syms => {
-                                        if (!syms || syms.length === 0) {
-                                            return;
-                                        }
+                    openFileAndNavigate(uri, method);
 
-                                        let methods2Symbols = new Map<String, DocumentSymbol>();
-                                        for (const sym of syms) {
-                                            for (const child of sym.children) {
-                                                if (child.kind !== SymbolKind.Method && child.kind !== SymbolKind.Constructor) {
-                                                    continue;
-                                                }
-
-                                                let methodName = child.name;
-                                                methodName = methodName.substring(0, methodName.indexOf('('));
-                                                if (child.kind === SymbolKind.Constructor) {
-                                                    methodName = '<init>';
-                                                }
-                                                methods2Symbols.set(methodName, child);
-                                            }
-                                        }
-
-                                        const symbol = methods2Symbols.get(method);
-                                        if (!symbol) {
-                                            return;
-                                        }
-                                        editor.revealRange(symbol.range, TextEditorRevealType.Default);
-                                        editor.selection = new Selection(symbol.range.start, symbol.range.start);
-                                    });
-                            });
-                    });
-                    //     return;
-                    // case 'profile' :
                     configToProfile = message.config;
                     if (profilePanel) {
                         profilePanel.reveal();
