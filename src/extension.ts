@@ -13,7 +13,9 @@ let selectedCommonSources = new Set<string>();
 let targetClass = "";
 let target: number = -1;
 
-let style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
+let traceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
+let hotspotStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
+let sourceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let filesToHighlight = new Map<String, Set<String>>();
 let sliceConnections = '';
 
@@ -51,8 +53,8 @@ export function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {
     console.log('Deactivating extension "perf-debug"');
-    if (style !== undefined) {
-        style.dispose();
+    if (traceStyle !== undefined) {
+        traceStyle.dispose();
     }
 }
 
@@ -435,7 +437,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     target = -1;
                     sliceConnections = '';
                     filesToHighlight.clear();
-                    style.dispose();
+                    traceStyle.dispose();
                     slicingPanel.webview.html = getSlicingContent();
                     return;
                 case 'slice':
@@ -487,12 +489,13 @@ function _slicing(context: vscode.ExtensionContext) {
         editorPath = editorPath.replace("/src/main/java/", "");
 
         if (editorPath in hotspotInfluencesRaw) {
-            const hotspot = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
+            hotspotStyle.dispose();
+            hotspotStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
             let ranges: vscode.Range[] = [];
             hotspotInfluencesRaw[editorPath].forEach(entry => {
                 ranges.push(doc.lineAt((+entry - 1)).range);
             });
-            vscode.window.activeTextEditor.setDecorations(hotspot, ranges);
+            vscode.window.activeTextEditor.setDecorations(hotspotStyle, ranges);
         }
 
         const lines = filesToHighlight.get(editorPath);
@@ -511,9 +514,9 @@ function _slicing(context: vscode.ExtensionContext) {
             const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
             ranges.push(line.range);
         }
-        style.dispose();
-        style = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
-        vscode.window.activeTextEditor.setDecorations(style, ranges);
+        traceStyle.dispose();
+        traceStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
+        vscode.window.activeTextEditor.setDecorations(traceStyle, ranges);
     }, null, context.subscriptions);
 }
 
@@ -530,11 +533,7 @@ function getSliceInfoRaw(dataDir: string) {
 }
 
 function getSlicingContent() {
-    let targetList = '<ul><li>Select a hotspot</li></ul>';
-    if (target > 0) {
-        targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
-    }
-
+    console.log(OPTIONS_TO_ANALYZE);
     let commonSourcesSelect = '';
     Object.entries(commonSources).forEach(entry => {
         commonSourcesSelect = commonSourcesSelect.concat('<div style="font-size: 14px;">\n');
@@ -552,6 +551,11 @@ function getSlicingContent() {
         commonSourcesSelect = commonSourcesSelect.concat('</label>\n');
         commonSourcesSelect = commonSourcesSelect.concat('</div>\n');
     });
+
+    let targetList = '<ul><li>Select a hotspot</li></ul>';
+    if (target > 0) {
+        targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
+    }
 
     const graphData: string = '{ data: \"digraph { node [shape=box fillcolor=white style=filled] concentrate=true ' + sliceConnections + '}\" }';
 
@@ -575,11 +579,11 @@ function getSlicingContent() {
             <b>Hotspot:</b> ${targetList} 
         </div>
         <br>
-        <div><button id="slice-trigger">Trace</button> <button id="clear-trigger">Clear</button></div>
+        <div><button id="clear-trigger">Clear</button></div>
         <br>
         <hr>
         <br>
-        <div style="font-size: 14px;"><b>Clickable Trace from Options to the Hotspot:</b></div>
+        <div style="font-size: 14px;"><b>Trace from Options to the Hotspot:</b></div>
         <br>
         <div id="connection-graph"></div>
         <script type="text/javascript">         
@@ -615,12 +619,6 @@ function getSlicingContent() {
                 document.getElementById("clear-trigger").addEventListener("click", function () {                    
                     vscode.postMessage({
                         command: 'clear'
-                    });
-                });
-                
-                document.getElementById("slice-trigger").addEventListener("click", function () {                    
-                    vscode.postMessage({
-                        command: 'slice'
                     });
                 });
                 
