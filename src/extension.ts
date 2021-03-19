@@ -710,6 +710,12 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     openFileAndNavigate(uri, method);
                     return;
+                case 'trace' :
+                    OPTIONS_TO_ANALYZE = message.options;
+                    if (slicingPanel) {
+                        slicingPanel.dispose();
+                    }
+                    vscode.commands.executeCommand('slicing.start');
             }
         },
         undefined,
@@ -820,8 +826,8 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <div id="influencingOptions"></div>
         <br>
 <!--        <hr>-->
-<!--        <br>-->
-<!--        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>-->
+        <br>
+        <div style="display: inline;"><button id="trace-trigger">Trace Options</button></div>
         <script type="text/javascript">                  
             (function () {
                 const vscode = acquireVsCodeApi();
@@ -983,12 +989,6 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     });
                 }
                 
-                // document.getElementById("local-influence-trigger").addEventListener("click", function () {    
-                //     vscode.postMessage({
-                //         command: 'localInfluence'
-                //     });
-                // });
-                //
                 function compareProfiles() {
                     const configs = [];
                     configs.push(document.getElementById("configSelect").value);
@@ -1024,6 +1024,24 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         if(methodToProfile.length > 0 && row.getData().methodLong.startsWith(methodToProfile)) {
                             row.select();
                         }
+                    });
+                });
+                
+                document.getElementById("trace-trigger").addEventListener("click", () => {                   
+                    const selectedOptions = new Set();
+                    influencingOptionsTable.getRows().forEach(row => {
+                        if(row.isSelected()) {
+                            row.getData().option.split(',').forEach(optionRaw => {
+                                if(optionRaw.length > 0) {
+                                    selectedOptions.add(optionRaw.split(' ')[0]);
+                                }
+                            }); 
+                        }
+                    });
+                    
+                    vscode.postMessage({
+                        command: 'trace',
+                        options: Array.from(selectedOptions)
                     });
                 });
             }())
@@ -1108,6 +1126,12 @@ function _globalModel(context: vscode.ExtensionContext) {
                     }
                     vscode.commands.executeCommand('perfProfiles.start');
                     return;
+                case 'trace' :
+                    OPTIONS_TO_ANALYZE = message.options;
+                    if (slicingPanel) {
+                        slicingPanel.dispose();
+                    }
+                    vscode.commands.executeCommand('slicing.start');
             }
         },
         undefined,
@@ -1285,8 +1309,8 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
         <div id="localInfluence"></div>
         <br>
 <!--        <hr>-->
-<!--        <br>-->
-<!--        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>-->
+        <br>
+        <div style="display: inline;"><button id="trace-trigger">Trace Options</button></div>
         <script type="text/javascript">          
             (function () {    
                 const vscode = acquireVsCodeApi();
@@ -1302,7 +1326,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 const localInfluenceTable = new Tabulator("#localInfluence", {
                     layout: "fitColumns",
                     columns: [
-                        { title: "Influenced Methods", field: "methods", sorter: "string" }, 
+                        { title: "Influenced Hot Spot", field: "methods", sorter: "string" }, 
                         { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
                         { title: "method",  field: "method" },
                     ],
@@ -1470,11 +1494,23 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     viewPerfModel();
                 });
             
-                // document.getElementById("profile-config-trigger").addEventListener("click", function () {    
-                //     vscode.postMessage({
-                //         command: 'profile'
-                //     });
-                // });
+                document.getElementById("trace-trigger").addEventListener("click", () => {                    
+                    const selectedOptions = new Set();
+                    perfModelTable.getRows().forEach(row => {
+                        if(row.isSelected()) {
+                            row.getData().option.split(',').forEach(optionRaw => {
+                                if(optionRaw.length > 0) {
+                                    selectedOptions.add(optionRaw.split(' ')[0]);
+                                }
+                            }); 
+                        }
+                    });
+                    
+                    vscode.postMessage({
+                        command: 'trace',
+                        options: Array.from(selectedOptions)
+                    });
+                });
             }())
         </script>
     </body>
