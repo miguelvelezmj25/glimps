@@ -596,14 +596,15 @@ function getSlicingContent() {
         <br>
         ${commonSourcesSelect}
         <br>
-        <br>
         <div>
             <b>Hotspot:</b> ${targetList} 
         </div>
         <br>
-        <div><button id="clear-trigger">Clear</button></div>
+        <div style="display: inline; padding-right: 10px;"><button id="clear-trigger">Clear</button></div>
+        <div style="display: inline; padding-right: 10px;"><button id="global-influence-trigger">View Options' Influence</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <br>
-        <hr>
+        <br>
         <br>
         <div style="font-size: 14px;"><b>Trace from Options to the Hotspot:</b></div>
         <br>
