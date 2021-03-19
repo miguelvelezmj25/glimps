@@ -687,15 +687,9 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     const response = JSON.parse(res.getBody() + "");
                     profilePanel.webview.postMessage({response: response.data});
                     return;
-                // case 'localInfluence' :
-                //     if (localModelPanel) {
-                //         localModelPanel.reveal();
-                //     } else {
-                //         vscode.commands.executeCommand('localModels.start');
-                //     }
-                //     return;
                 case 'open-influence' :
                     CONFIG_TO_PROFILE = message.config;
+                    METHOD_TO_PROFILE = message.method;
                     OPTIONS_TO_ANALYZE = message.options;
                     if (globalModelPanel) {
                         globalModelPanel.dispose();
@@ -792,7 +786,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
     }
 
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
-    const methodToProfile = '{ method: "' + METHOD_TO_PROFILE + '" }';
+    const methodToProfile = getMethodToProfile();
     const optionsToAnalyze = getOptionsToAnalyze();
 
     return `<!DOCTYPE html>
@@ -835,6 +829,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 const names2LocalModels = ${names2LocalModels};
                 const methodToProfile = ${methodToProfile}.method;
                 const optionsToAnalyze = ${optionsToAnalyze}.options;
+                let selectedRow = undefined;
                 
                 document.getElementById("configSelect").addEventListener("change", () => {
                     compareProfiles();
@@ -860,10 +855,18 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                            options.add(optionRaw.split(' ')[0]);
                        } 
                     });
+                    
+                    let hotspotRow = selectedRow;
+                    while(hotspotRow.getTreeParent() !== false) {
+                        hotspotRow = hotspotRow.getTreeParent();
+                    }
+                    let method = hotspotRow.getData().methodLong;
+                    method = method.substring(0, method.indexOf("("));
                     vscode.postMessage({
                         command: 'open-influence',
                         config: document.getElementById("configSelect").value,
-                        options: Array.from(options)
+                        options: Array.from(options),
+                        method: method
                     });
                 }
                 
@@ -937,7 +940,6 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     }); 
                 }
                 
-                let selectedRow = undefined;
                 function showInfluence(data, rows) {
                     if(rows.length === 0) {
                         influencingOptionsTable.setData([]);
@@ -1236,6 +1238,10 @@ function getOptionsToAnalyze() {
     return optionsToAnalyze;
 }
 
+function getMethodToProfile() {
+    return '{ method: "' + METHOD_TO_PROFILE + '" }';
+}
+
 function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
     const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
     const configs = getConfigs(rawConfigs);
@@ -1244,6 +1250,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     const names2PerfModels = getNames2PerfModels(names2ConfigsRaw, perfModel);
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
     const optionsToAnalyze = getOptionsToAnalyze();
+    const methodToProfile = getMethodToProfile();
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -1290,6 +1297,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 const names2LocalModels = ${names2LocalModels};
                 const names2Configs = ${names2Configs};
                 const optionsToAnalyze = ${optionsToAnalyze}.options;
+                const methodToProfile = ${methodToProfile}.method;
                 let selectedRow = undefined;
                 
                 const localInfluenceTable = new Tabulator("#localInfluence", {
@@ -1302,6 +1310,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     rowClick:openFile,
                 });
                 localInfluenceTable.hideColumn("method");
+                
                 function openFile(e, row){
                     const file = row.getData().method;
                     const selectedOptions = new Set();
@@ -1378,6 +1387,12 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                         localInfluence.push({methods: method, influence: influence, method: methodRaw});
                     });
                     localInfluenceTable.setData(localInfluence);
+                    
+                    localInfluenceTable.getRows().forEach(row => {
+                        if(methodToProfile.length > 0 && row.getData().method.startsWith(methodToProfile)) {
+                            row.select();
+                        }
+                    });
                 }
                 
                 function influenceSort(a, b) {
