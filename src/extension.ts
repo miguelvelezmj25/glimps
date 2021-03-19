@@ -333,10 +333,9 @@ function _sliceTarget(context: vscode.ExtensionContext) {
     target = sliceData.line;
 
     if (slicingPanel) {
-        slicingPanel.webview.html = getSlicingContent();
-    } else {
-        _slicing(context);
+        slicingPanel.dispose();
     }
+    vscode.commands.executeCommand('slicing.start');
 }
 
 function getShortSliceMethod(method: string) {
@@ -446,18 +445,18 @@ function _slicing(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    slicingPanel.dispose();
-
-                    OPTIONS_TO_ANALYZE = [];
-
                     targetClass = "";
                     target = -1;
+
+                    OPTIONS_TO_ANALYZE = [];
                     filesToHighlight.clear();
                     traceStyle.dispose();
-
+                    slicingPanel.dispose();
                     vscode.commands.executeCommand('slicing.start');
                     return;
                 case 'slice':
+                    OPTIONS_TO_ANALYZE = message.selectedOptions;
+
                     if (!slicingPanel) {
                         return;
                     }
@@ -568,7 +567,7 @@ function getSlicingContent() {
 
     let targetList = '<ul><li>Select a hotspot</li></ul>';
     if (target > 0) {
-        targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
+        targetList = '<ul><li id="hotspot">' + targetClass + ":" + target + '</li></ul>';
     }
 
     return `<!DOCTYPE html>
@@ -605,16 +604,20 @@ function getSlicingContent() {
                 
                 window.addEventListener('message', event => {
                     short2Methods.clear();
+                    if(event.data.connections.key.length === 0) {
+                        d3.select("#connection-graph").graphviz()
+                            .renderDot('digraph { node [shape=box fillcolor=white style=filled fontcolor=red fontsize=24] "No trace" }').zoom(false);
+                        return
+                    }
+                    
                     event.data.connections.key.forEach(entry => {
                         short2Methods.set(entry[0], entry[1]);
                     });
-
+                    
                     const graphData = 'digraph { node [shape=box fillcolor=white style=filled] concentrate=true ' + event.data.connections.connections + ' }';
-                    if(graphData.length > 74) { 
-                        d3.select("#connection-graph").graphviz()
-                            .renderDot(graphData).zoom(false)
-                            .on("end", interactive);
-                    }
+                    d3.select("#connection-graph").graphviz()
+                        .renderDot(graphData).zoom(false)
+                        .on("end", interactive);
                 });
                                                                 
                 function interactive() {
@@ -656,6 +659,19 @@ function getSlicingContent() {
                         });
                     });
                 });
+                
+                if(document.getElementById("hotspot") !== undefined) {
+                    let selectOptions = [];
+                    document.getElementsByName("source-checkbox").forEach(element => {
+                        if(element.checked) {
+                            selectOptions.push(element.id);
+                        }
+                    })
+                    vscode.postMessage({
+                        command: 'slice',
+                        selectedOptions: selectOptions
+                    });
+                }
             }())
         </script>
         
