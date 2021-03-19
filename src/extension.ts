@@ -20,6 +20,7 @@ let sliceConnections = '';
 let CONFIG_TO_PROFILE: string = '';
 let CONFIG_TO_COMPARE: string = '';
 let METHOD_TO_PROFILE: string = '';
+let OPTIONS_TO_ANALYZE: string[] = [];
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
 let localModelPanel: vscode.WebviewPanel | undefined = undefined;
@@ -697,6 +698,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                 //     return;
                 case 'open-influence' :
                     CONFIG_TO_PROFILE = message.config;
+                    OPTIONS_TO_ANALYZE = message.options;
                     if (globalModelPanel) {
                         globalModelPanel.dispose();
                     }
@@ -851,10 +853,17 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     ],
                 });
                 
-                function openInfluence(){
+                function openInfluence(e, row){
+                    const options = new Set();
+                    row.getData().option.split(',').forEach(optionRaw => {
+                       if(optionRaw.length > 0) {
+                           options.add(optionRaw.split(' ')[0]);
+                       } 
+                    });
                     vscode.postMessage({
                         command: 'open-influence',
-                        config: document.getElementById("configSelect").value
+                        config: document.getElementById("configSelect").value,
+                        options: Array.from(options)
                     });
                 }
                 
@@ -999,7 +1008,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     table.setData(resp);
                     
                     table.getRows().forEach(row => {
-                        if(row.getData().methodLong.startsWith(methodToProfile)) {
+                        if(methodToProfile.length > 0 && row.getData().methodLong.startsWith(methodToProfile)) {
                             row.select();
                         }
                     });
@@ -1322,6 +1331,13 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     const perfModel = getPerfModel(rawPerfModel);
     const names2PerfModels = getNames2PerfModels(names2ConfigsRaw, perfModel);
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
+    let optionsToAnalyze = '{ options: [';
+    OPTIONS_TO_ANALYZE.forEach(option => {
+        optionsToAnalyze = optionsToAnalyze.concat('"');
+        optionsToAnalyze = optionsToAnalyze.concat(option);
+        optionsToAnalyze = optionsToAnalyze.concat('", ');
+    });
+    optionsToAnalyze = optionsToAnalyze.concat('] }');
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -1367,6 +1383,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 const names2PerfModels = ${names2PerfModels};
                 const names2LocalModels = ${names2LocalModels};
                 const names2Configs = ${names2Configs};
+                const optionsToAnalyze = ${optionsToAnalyze}.options;
                 let selectedRow = undefined;
                 
                 const localInfluenceTable = new Tabulator("#localInfluence", {
@@ -1397,6 +1414,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     ],
                     rowSelectionChanged:selectInfluence
                 });
+                
                 function selectInfluence(data, rows) {
                     if(rows.length === 0) {
                         localInfluenceTable.setData([]);
@@ -1448,6 +1466,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     });
                     localInfluenceTable.setData(localInfluence);
                 }
+                
                 function influenceSort(a, b) {
                     let one = a.replace("+","");
                     one = one.replace("-","");
@@ -1455,6 +1474,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     two = two.replace("-","");
                     return (+one) - (+two);
                 }
+                
                 function customFormatter(cell) {
                     const val = cell.getValue();
                     const entries = val.split(",");
@@ -1504,6 +1524,18 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     });
                 
                     document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
+                    
+                    perfModelTable.getRows().forEach(row => {
+                        const selectedOptions = new Set();
+                        row.getData().option.split(',').forEach(optionRaw => {
+                            if(optionRaw.length > 0) {
+                                selectedOptions.add(optionRaw.split(' ')[0]);
+                            }
+                        }); 
+                        if(optionsToAnalyze.sort().join(',') === Array.from(selectedOptions).sort().join(',')) {
+                            row.select();
+                        }
+                    });
                 }
                 viewPerfModel();
                     
