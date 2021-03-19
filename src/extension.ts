@@ -376,7 +376,16 @@ function getHotspotInfluencesRaw(dataDir: string) {
 function getSliceSourcesRaw(dataDir: string) {
     let sources: { [key: string]: string[]; } = {};
     parse(fs.readFileSync(path.join(dataDir, 'tracing', 'sources.csv'), 'utf8')).forEach((entry: string[]) => {
-        sources[entry[1]] = [entry[0], entry[2]];
+        const methodEntries = entry[0].split('.');
+        let shortMethod = '';
+        for (let i = 0; i < (methodEntries.length - 2); i++) {
+            shortMethod = shortMethod.concat(methodEntries[i][0]);
+            shortMethod = shortMethod.concat(".");
+        }
+        shortMethod = shortMethod.concat(methodEntries[methodEntries.length - 2]);
+        shortMethod = shortMethod.concat('.');
+        shortMethod = shortMethod.concat(methodEntries[methodEntries.length - 1]);
+        sources[entry[1]] = [shortMethod, entry[2]];
     });
     return sources;
 }
