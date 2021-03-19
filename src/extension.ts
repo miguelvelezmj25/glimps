@@ -17,8 +17,8 @@ let style: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecor
 let filesToHighlight = new Map<String, Set<String>>();
 let sliceConnections = '';
 
-let configToProfile: string = '';
-let configToCompare: string = '';
+let CONFIG_TO_PROFILE: string = '';
+let CONFIG_TO_COMPARE: string = '';
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
 let localModelPanel: vscode.WebviewPanel | undefined = undefined;
@@ -766,7 +766,7 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         leftConfigs = leftConfigs.concat("<option value=\"");
         leftConfigs = leftConfigs.concat(config);
         leftConfigs = leftConfigs.concat('" ');
-        leftConfigs = leftConfigs.concat(config === configToProfile ? 'selected="selected"' : '');
+        leftConfigs = leftConfigs.concat(config === CONFIG_TO_PROFILE ? 'selected="selected"' : '');
         leftConfigs = leftConfigs.concat(">");
         leftConfigs = leftConfigs.concat(config);
         leftConfigs = leftConfigs.concat("</option>");
@@ -778,11 +778,11 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         rightConfigs = rightConfigs.concat(config);
         rightConfigs = rightConfigs.concat('" ');
         let x = '';
-        if (configToCompare.length === 0) {
-            if (config !== configToProfile) {
+        if (CONFIG_TO_COMPARE.length === 0) {
+            if (config !== CONFIG_TO_PROFILE) {
                 x = 'selected="selected"';
             }
-        } else if (config === configToProfile) {
+        } else if (config === CONFIG_TO_PROFILE) {
             x = 'selected="selected"';
         }
         rightConfigs = rightConfigs.concat(x);
@@ -1042,7 +1042,7 @@ function _globalModel(context: vscode.ExtensionContext) {
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     openFileAndNavigate(uri, method);
 
-                    configToProfile = message.config;
+                    CONFIG_TO_PROFILE = message.config;
                     if (profilePanel) {
                         profilePanel.reveal();
                     } else {
