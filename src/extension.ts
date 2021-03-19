@@ -466,7 +466,7 @@ function _slicing(context: vscode.ExtensionContext) {
     );
 
     const hotspotInfluences = getHotspotInfluences(dataDir);
-    vscode.window.onDidChangeActiveTextEditor(editor => {
+    vscode.window.onDidChangeActiveTextEditor(() => {
         if (!vscode.window.activeTextEditor) {
             return;
         }
@@ -572,12 +572,7 @@ function getSlicingContent() {
         <div style="font-size: 14px;"><b>Clickable Trace from Options to the Hotspot:</b></div>
         <br>
         <div id="connection-graph"></div>
-        <script type="text/javascript"> 
-        
-            function slice() {
-                mySlice();
-            }
-        
+        <script type="text/javascript">         
             (function () {
                 const vscode = acquireVsCodeApi();
                                                 
@@ -676,7 +671,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     }
                     const config1 = message.configs[0];
                     const config2 = message.configs[1] ? message.configs[1] : message.configs[0];
-                    var res = request('POST', 'http://localhost:8001/diff',
+                    const res = request('POST', 'http://localhost:8001/diff',
                         {
                             json: {
                                 programName: programName,
@@ -984,7 +979,7 @@ function getNames2ConfigsRaw(dataDir: string) {
     let names2Configs: any[] = [];
     fs.readdirSync(path.join(dataDir, 'configs')).forEach(file => {
         const config = path.parse(file).name;
-        const value = parse(fs.readFileSync(path.join(dataDir, 'configs/' + file), 'utf8'))
+        const value = parse(fs.readFileSync(path.join(dataDir, 'configs/' + file), 'utf8'));
         names2Configs.push({config: config, value: value});
     });
     return names2Configs;
@@ -1349,14 +1344,14 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     });
                     localInfluenceTable.setData(localInfluence);
                 }
-                function influenceSort(a, b, aRow, bRow, column, dir, sorterParams) {
+                function influenceSort(a, b) {
                     let one = a.replace("+","");
                     one = one.replace("-","");
                     let two = b.replace("+","");
                     two = two.replace("-","");
                     return (+one) - (+two);
                 }
-                function customFormatter(cell, formatterParams, onRendered) {
+                function customFormatter(cell) {
                     const val = cell.getValue();
                     const entries = val.split(",");
                     const cellDiv = document.createElement('div');
@@ -1423,18 +1418,6 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     </html>`;
 }
 
-function getConfig(rawDefaultConfig: string[]) {
-    let result = "";
-    rawDefaultConfig.forEach((entry) => {
-        result = result.concat("{ option: \"");
-        result = result.concat(entry[0]);
-        result = result.concat("\", value: \"");
-        result = result.concat(entry[1]);
-        result = result.concat("\" }, ");
-    });
-    return result;
-}
-
 function getPerfModel(rawPerfModel: string[]) {
     let perfModel = "[";
     for (let i = 0; i < rawPerfModel.length; i++) {
@@ -1458,44 +1441,6 @@ function getPerfModel(rawPerfModel: string[]) {
         perfModel = perfModel.concat('" },');
     }
     return perfModel.concat("]");
-}
-
-// function getPerfModel(rawPerfModel: string[]) {
-//     let result = "";
-//     rawPerfModel.forEach((entry) => {
-//         result = result.concat("{ option: \"");
-//         result = result.concat(entry[0]);
-//         result = result.concat("\", influence: \"");
-//         result = result.concat(entry[1]);
-//         result = result.concat("\" }, ");
-//     });
-//     return result;
-// }
-
-function getSelectedConfig(defaultConfig: string[], rawConfig: string[]) {
-    let selected: string[] = [];
-    rawConfig.forEach((entry) => {
-        const option = entry[0];
-        defaultConfig.forEach((defaultEntry) => {
-            if (option === defaultEntry[0]) {
-                if (entry[1] !== defaultEntry[1]) {
-                    selected.push(option);
-                }
-            }
-        });
-    });
-
-    if (selected.length === 0) {
-        return "";
-    }
-
-    let result = "";
-    selected.forEach((entry) => {
-        result = result.concat("{ option: \"");
-        result = result.concat(entry);
-        result = result.concat("\" }, ");
-    });
-    return result;
 }
 
 interface BasicMethodInfo {
