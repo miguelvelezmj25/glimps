@@ -9,7 +9,6 @@ import * as parse from 'csv-parse/lib/sync';
 const request = require('sync-request');
 
 let commonSources: { [p: string]: string[] } = {};
-let selectedCommonSources = new Set<string>();
 let targetClass = "";
 let target: number = -1;
 
@@ -17,7 +16,6 @@ let traceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditor
 let hotspotStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
 let sourceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let filesToHighlight = new Map<String, Set<String>>();
-let sliceConnections = '';
 
 let CONFIG_TO_PROFILE: string = '';
 let CONFIG_TO_COMPARE: string = '';
@@ -341,24 +339,31 @@ function _sliceTarget(context: vscode.ExtensionContext) {
     }
 }
 
-function setSliceConnections(connections: any[]) {
-    let result = '';
+function getShortSliceMethod(method: string) {
+    const entries = method.split('.');
+    return entries[entries.length - 2] + "." + entries[entries.length - 1] + "(...)";
+}
+
+function getSliceConnections(connections: any[]) {
+    let short2Methods = new Map<string, string>();
+    let sliceConnections = '';
     connections.forEach(entry => {
         let source = entry.source;
         source = source.substring(0, source.indexOf("("));
         let target = entry.target;
         target = target.substring(0, target.indexOf("("));
-        result = result.concat('\\\"'
-            + source.substring(0, source.lastIndexOf("."))
-            + "\\n"
-            + source.substring(source.lastIndexOf(".") + 1)
-            + '\\\" -> \\\"'
-            + target.substring(0, target.lastIndexOf("."))
-            + "\\n"
-            + target.substring(target.lastIndexOf(".") + 1)
-            + '\\\" ');
+        const shortSource = getShortSliceMethod(source);
+        const shortTarget = getShortSliceMethod(target);
+        short2Methods.set(shortSource, source);
+        short2Methods.set(shortTarget, target);
+
+        sliceConnections = sliceConnections.concat('"');
+        sliceConnections = sliceConnections.concat(shortSource);
+        sliceConnections = sliceConnections.concat('" -> "');
+        sliceConnections = sliceConnections.concat(shortTarget);
+        sliceConnections = sliceConnections.concat('" ');
     });
-    sliceConnections = result;
+    return {connections: sliceConnections, key: JSON.parse(JSON.stringify([...short2Methods]))};
 }
 
 function getHotspotInfluencesRaw(dataDir: string) {
@@ -387,7 +392,15 @@ function getSliceSourcesRaw(dataDir: string) {
         shortMethod = shortMethod.concat(methodEntries[methodEntries.length - 2]);
         shortMethod = shortMethod.concat('.');
         shortMethod = shortMethod.concat(methodEntries[methodEntries.length - 1]);
-        sources[entry[1]] = [shortMethod, entry[2]];
+
+        let shortMethodSlice = '';
+        for (let i = 0; i < (methodEntries.length - 2); i++) {
+            shortMethodSlice = shortMethodSlice.concat(methodEntries[i]);
+            shortMethodSlice = shortMethodSlice.concat(".");
+        }
+
+        shortMethodSlice = shortMethodSlice.concat(methodEntries[methodEntries.length - 2]);
+        sources[entry[1]] = [shortMethod, entry[2], shortMethodSlice];
     });
     return sources;
 }
@@ -423,7 +436,7 @@ function _slicing(context: vscode.ExtensionContext) {
             const regex = /\./g;
             switch (message.command) {
                 case 'link':
-                    const className = message.method.substring(0, message.method.indexOf('\n')).replace(regex, '/');
+                    const className = message.method.substring(0, message.method.lastIndexOf('.')).replace(regex, '/');
                     const method = message.method.substring(message.method.indexOf('\n') + 1);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     openFileAndNavigate(uri, method);
@@ -439,7 +452,6 @@ function _slicing(context: vscode.ExtensionContext) {
 
                     targetClass = "";
                     target = -1;
-                    sliceConnections = '';
                     filesToHighlight.clear();
                     traceStyle.dispose();
 
@@ -454,17 +466,15 @@ function _slicing(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    selectedCommonSources.clear();
                     let lines: number[] = [];
                     message.selectedOptions.forEach((option: string) => {
-                        selectedCommonSources.add(option);
                         lines.push(+commonSources[option][1]);
                     });
 
                     const res = request('POST', 'http://localhost:' + port + '/slice',
                         {
                             json: {
-                                sourceClass: (commonSources[message.selectedOptions[0]][0].replace(regex, '/') + '.java'),
+                                sourceClass: (commonSources[message.selectedOptions[0]][2].replace(regex, '/') + '.java'),
                                 sourceLines: lines,
                                 targetClass: targetClass,
                                 targetLines: target,
@@ -473,8 +483,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     );
                     const response = JSON.parse(res.getBody() + "");
                     setFilesToHighlight(response.slice);
-                    setSliceConnections(response.connections);
-                    slicingPanel.webview.html = getSlicingContent();
+                    slicingPanel.webview.postMessage({connections: getSliceConnections(response.connections)});
                     return;
             }
         },
@@ -562,8 +571,6 @@ function getSlicingContent() {
         targetList = '<ul><li>' + targetClass + ":" + target + '</li></ul>';
     }
 
-    const graphData: string = '{ data: \"digraph { node [shape=box fillcolor=white style=filled] concentrate=true ' + sliceConnections + '}\" }';
-
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -594,25 +601,33 @@ function getSlicingContent() {
         <script type="text/javascript">         
             (function () {
                 const vscode = acquireVsCodeApi();
-                                                
-                const graphData = ${graphData}.data;
-                if(graphData.length > 74) { 
-                    d3.select("#connection-graph").graphviz()
-                        .renderDot(graphData).zoom(false)
-                        .on("end", interactive);
-                }
+                let short2Methods = new Map();
                 
+                window.addEventListener('message', event => {
+                    short2Methods.clear();
+                    event.data.connections.key.forEach(entry => {
+                        short2Methods.set(entry[0], entry[1]);
+                    });
+
+                    const graphData = 'digraph { node [shape=box fillcolor=white style=filled] concentrate=true ' + event.data.connections.connections + ' }';
+                    if(graphData.length > 74) { 
+                        d3.select("#connection-graph").graphviz()
+                            .renderDot(graphData).zoom(false)
+                            .on("end", interactive);
+                    }
+                });
+                                                                
                 function interactive() {
                     const nodes = d3.selectAll('.node');
                     nodes.on("click", function () {
                         const title = d3.select(this).selectAll('title').text();
                         vscode.postMessage({
                             command: 'link',
-                            method: title
+                            method: short2Methods.get(title)
                         });
                     });
                     nodes.on('mouseover', function() {
-                        d3.select(this).style("fill", "#c769ff");
+                        d3.select(this).style("fill", "#4c4cff");
                         d3.select(this).style("text-decoration", "underline");
                     })
                     nodes.on('mouseout', function() {
