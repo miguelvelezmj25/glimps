@@ -41,11 +41,11 @@ export function activate(context: vscode.ExtensionContext) {
     // The commandId parameter must match the command field in package.json
     const configDialog = vscode.commands.registerCommand('configDialog.start', () => _configDialog(context));
     const globalModel = vscode.commands.registerCommand('globalModel.start', () => _globalModel(context));
-    const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
+    // const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', () => _sliceTarget(context));
     const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
-    context.subscriptions.push(configDialog, globalModel, localModels, perfProfiles, slicingTarget, slicing);
+    context.subscriptions.push(configDialog, globalModel, perfProfiles, slicingTarget, slicing);
 }
 
 // this method is called when your extension is deactivated

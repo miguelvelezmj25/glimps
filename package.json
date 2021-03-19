@@ -13,7 +13,6 @@
   "activationEvents": [
     "onCommand:configDialog.start",
     "onCommand:globalModel.start",
-    "onCommand:localModels.start",
     "onCommand:perfProfiles.start",
     "onCommand:slicing.start",
     "onCommand:sliceTarget.start"
@@ -29,11 +28,6 @@
       {
         "command": "globalModel.start",
         "title": "View Options' Influence",
-        "category": "Perf Debug"
-      },
-      {
-        "command": "localModels.start",
-        "title": "View Local Performance Influence",
         "category": "Perf Debug"
       },
       {
