@@ -25,6 +25,8 @@ let localModelPanel: vscode.WebviewPanel | undefined = undefined;
 let profilePanel: vscode.WebviewPanel | undefined = undefined;
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
+let NAMES_2_CONFIGS: string | undefined = undefined;
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -72,7 +74,7 @@ function _configDialog(context: vscode.ExtensionContext) {
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const allConfigs = getAllConfigs(dataDir);
-    const names2Configs = getNames2Configs(dataDir);
+    const names2Configs = getNames2ConfigsRaw(dataDir);
     const optionValues = getOptionsValues(dataDir);
     panel.webview.html = getConfigDialogContent(allConfigs, names2Configs, optionValues);
 
@@ -144,24 +146,30 @@ function getConfigs(rawConfigs: string[]) {
     return configs;
 }
 
+function getNames2Configs(names2ConfigsRaw: any) {
+    if (!NAMES_2_CONFIGS) {
+        NAMES_2_CONFIGS = '{';
+        for (let i = 0; i < names2ConfigsRaw.length; i++) {
+            NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat('"');
+            NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat(names2ConfigsRaw[i].config);
+            NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat('": [');
+            for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
+                NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat('{ option : "');
+                NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat(names2ConfigsRaw[i].value[j][0]);
+                NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat('", value: "');
+                NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat(names2ConfigsRaw[i].value[j][1]);
+                NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat('"}, ');
+            }
+            NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat('],');
+        }
+        NAMES_2_CONFIGS = NAMES_2_CONFIGS.concat('}');
+    }
+    return NAMES_2_CONFIGS;
+}
+
 function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
     const configs = getConfigs(rawConfigs);
-
-    let names2Configs = '{';
-    for (let i = 0; i < names2ConfigsRaw.length; i++) {
-        names2Configs = names2Configs.concat('"');
-        names2Configs = names2Configs.concat(names2ConfigsRaw[i].config);
-        names2Configs = names2Configs.concat('": [');
-        for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
-            names2Configs = names2Configs.concat('{ option : "');
-            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][0]);
-            names2Configs = names2Configs.concat('", value: "');
-            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][1]);
-            names2Configs = names2Configs.concat('"}, ');
-        }
-        names2Configs = names2Configs.concat('],');
-    }
-    names2Configs = names2Configs.concat('}');
+    const names2Configs = getNames2Configs(names2ConfigsRaw);
 
     let optionsValues = '{';
     for (let i = 0; i < optionValuesRaw.length; i++) {
@@ -922,7 +930,7 @@ function _localModels(context: vscode.ExtensionContext) {
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const methodBasicInfo = getMethodsInfo(dataDir);
     const methods2Models = getMethods2Models(dataDir);
-    const names2Configs = getNames2Configs(dataDir);
+    const names2Configs = getNames2ConfigsRaw(dataDir);
     localModelPanel.webview.postMessage({
         methodBasicInfo: methodBasicInfo,
         methods2Models: methods2Models,
@@ -970,7 +978,7 @@ function getOptionsValues(dataDir: string) {
     return parse(fs.readFileSync(dataDir + '/options.csv', 'utf8'));
 }
 
-function getNames2Configs(dataDir: string) {
+function getNames2ConfigsRaw(dataDir: string) {
     let names2Configs: any[] = [];
     fs.readdirSync(path.join(dataDir, 'configs')).forEach(file => {
         const config = path.parse(file).name;
@@ -1012,7 +1020,7 @@ function _globalModel(context: vscode.ExtensionContext) {
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
     const allConfigs = getAllConfigs(dataDir);
-    const names2Configs = getNames2Configs(dataDir);
+    const names2Configs = getNames2ConfigsRaw(dataDir);
     const methods2Models = getMethods2Models(dataDir);
     globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, names2Configs, methods2Models);
 
@@ -1107,22 +1115,7 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
 function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
     const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
     const configs = getConfigs(rawConfigs);
-
-    let names2Configs = '{';
-    for (let i = 0; i < names2ConfigsRaw.length; i++) {
-        names2Configs = names2Configs.concat('"');
-        names2Configs = names2Configs.concat(names2ConfigsRaw[i].config);
-        names2Configs = names2Configs.concat('": [');
-        for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
-            names2Configs = names2Configs.concat('{ option : "');
-            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][0]);
-            names2Configs = names2Configs.concat('", value: "');
-            names2Configs = names2Configs.concat(names2ConfigsRaw[i].value[j][1]);
-            names2Configs = names2Configs.concat('"}, ');
-        }
-        names2Configs = names2Configs.concat('],');
-    }
-    names2Configs = names2Configs.concat('}');
+    const names2Configs = getNames2Configs(names2ConfigsRaw);
 
     const perfModel = getPerfModel(rawPerfModel);
     const perfModelEval = eval(perfModel);
