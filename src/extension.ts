@@ -777,15 +777,15 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         rightConfigs = rightConfigs.concat("<option value=\"");
         rightConfigs = rightConfigs.concat(config);
         rightConfigs = rightConfigs.concat('" ');
-        let x = '';
+        let selected = '';
         if (CONFIG_TO_COMPARE.length === 0) {
             if (config !== CONFIG_TO_PROFILE) {
-                x = 'selected="selected"';
+                selected = 'selected="selected"';
             }
         } else if (config === CONFIG_TO_PROFILE) {
-            x = 'selected="selected"';
+            selected = 'selected="selected"';
         }
-        rightConfigs = rightConfigs.concat(x);
+        rightConfigs = rightConfigs.concat(selected);
         rightConfigs = rightConfigs.concat(">");
         rightConfigs = rightConfigs.concat(config);
         rightConfigs = rightConfigs.concat("</option>");
@@ -793,6 +793,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
 
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
     const methodToProfile = '{ method: "' + METHOD_TO_PROFILE + '" }';
+    const optionsToAnalyze = getOptionsToAnalyze();
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -833,6 +834,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 const vscode = acquireVsCodeApi();
                 const names2LocalModels = ${names2LocalModels};
                 const methodToProfile = ${methodToProfile}.method;
+                const optionsToAnalyze = ${optionsToAnalyze}.options;
                 
                 document.getElementById("configSelect").addEventListener("change", () => {
                     compareProfiles();
@@ -966,6 +968,18 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     });
                     
                     document.getElementById("local-model-method").innerHTML = "<b>Local Influencing Options for:</b> " + hotspotRow.getData().method;
+                    
+                    influencingOptionsTable.getRows().forEach(row => {
+                        const selectedOptions = new Set();
+                        row.getData().option.split(',').forEach(optionRaw => {
+                            if(optionRaw.length > 0) {
+                                selectedOptions.add(optionRaw.split(' ')[0]);
+                            }
+                        }); 
+                        if(optionsToAnalyze.sort().join(',') === Array.from(selectedOptions).sort().join(',')) {
+                            row.select();
+                        }
+                    });
                 }
                 
                 // document.getElementById("local-influence-trigger").addEventListener("click", function () {    
@@ -1087,6 +1101,7 @@ function _globalModel(context: vscode.ExtensionContext) {
 
                     CONFIG_TO_PROFILE = message.config;
                     METHOD_TO_PROFILE = message.method;
+                    OPTIONS_TO_ANALYZE = message.options;
                     if (profilePanel) {
                         profilePanel.dispose();
                     }
@@ -1210,13 +1225,7 @@ function getNames2LocalModels(names2ConfigsRaw: any, methods2ModelsRaw: any) {
     return NAMES_2_LOCAL_MODELS;
 }
 
-function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
-    const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
-    const configs = getConfigs(rawConfigs);
-    const names2Configs = getNames2Configs(names2ConfigsRaw);
-    const perfModel = getPerfModel(rawPerfModel);
-    const names2PerfModels = getNames2PerfModels(names2ConfigsRaw, perfModel);
-    const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
+function getOptionsToAnalyze() {
     let optionsToAnalyze = '{ options: [';
     OPTIONS_TO_ANALYZE.forEach(option => {
         optionsToAnalyze = optionsToAnalyze.concat('"');
@@ -1224,6 +1233,17 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
         optionsToAnalyze = optionsToAnalyze.concat('", ');
     });
     optionsToAnalyze = optionsToAnalyze.concat('] }');
+    return optionsToAnalyze;
+}
+
+function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
+    const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
+    const configs = getConfigs(rawConfigs);
+    const names2Configs = getNames2Configs(names2ConfigsRaw);
+    const perfModel = getPerfModel(rawPerfModel);
+    const names2PerfModels = getNames2PerfModels(names2ConfigsRaw, perfModel);
+    const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
+    const optionsToAnalyze = getOptionsToAnalyze();
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -1284,10 +1304,17 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 localInfluenceTable.hideColumn("method");
                 function openFile(e, row){
                     const file = row.getData().method;
+                    const selectedOptions = new Set();
+                    selectedRow.getData().option.split(',').forEach(optionRaw => {
+                        if(optionRaw.length > 0) {
+                            selectedOptions.add(optionRaw.split(' ')[0]);
+                        }
+                    });
                     vscode.postMessage({
                         command: 'open-region',
                         method: file,
-                        config: document.getElementById("configSelect").value
+                        config: document.getElementById("configSelect").value,
+                        options: Array.from(selectedOptions)
                     });
                 }
                                       
