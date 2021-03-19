@@ -84,18 +84,18 @@ function _configDialog(context: vscode.ExtensionContext) {
         message => {
             switch (message.command) {
                 case 'globalInfluence' :
+                    CONFIG_TO_PROFILE = message.config;
                     if (globalModelPanel) {
-                        globalModelPanel.reveal();
-                    } else {
-                        vscode.commands.executeCommand('globalModel.start');
+                        globalModelPanel.dispose();
                     }
+                    vscode.commands.executeCommand('globalModel.start');
                     return;
                 case 'profile' :
+                    CONFIG_TO_PROFILE = message.config;
                     if (profilePanel) {
-                        profilePanel.reveal();
-                    } else {
-                        vscode.commands.executeCommand('perfProfiles.start');
+                        profilePanel.dispose();
                     }
+                    vscode.commands.executeCommand('perfProfiles.start');
                     return;
                 case 'save' :
                     const configName = message.configName;
@@ -205,9 +205,15 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
             </select>
         </div>
         <br>
-<!--        <hr>-->
         <br>
         <div id="displayConfig"></div>
+        <br>
+        <br>
+        <div style="display: inline;"><button id="global-influence-trigger">View Options' Influence</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
+        <br>
+        <br>
+        <br>
         <br>
         <hr>
         <br>
@@ -218,15 +224,6 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <div id="saveConfig"></div>
         <br>
         <div><button id="save-config-trigger">Save configuration</button></div>
-        <br>
-        <hr>
-        <br>
-        <div style="display: inline;"><button id="global-influence-trigger">View Options' Influence</button></div>
-<!--        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>-->
-        <br>
-        <br>
-        <br>
-        <br>
         <br>
         <script type="text/javascript">     
             const names2Configs = ${names2Configs};
@@ -277,15 +274,17 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                                 
                 document.getElementById("global-influence-trigger").addEventListener("click", function () {    
                     vscode.postMessage({
-                        command: 'globalInfluence'
+                        command: 'globalInfluence',
+                        config: document.getElementById("configSelect").value
                     });
                 });
                 
-                // document.getElementById("profile-config-trigger").addEventListener("click", function () {    
-                //     vscode.postMessage({
-                //         command: 'profile'
-                //     });
-                // });
+                document.getElementById("profile-config-trigger").addEventListener("click", function () {    
+                    vscode.postMessage({
+                        command: 'profile',
+                        config: document.getElementById("configSelect").value
+                    });
+                });
             }())
         </script>
     </body>
