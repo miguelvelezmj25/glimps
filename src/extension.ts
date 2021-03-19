@@ -75,10 +75,10 @@ function _configDialog(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const allConfigs = getAllConfigs(dataDir);
-    const names2Configs = getNames2ConfigsRaw(dataDir);
-    const optionValues = getOptionsValues(dataDir);
-    panel.webview.html = getConfigDialogContent(allConfigs, names2Configs, optionValues);
+    const allConfigsRaw = getAllConfigsRaw(dataDir);
+    const names2ConfigsRaw = getNames2ConfigsRaw(dataDir);
+    const optionValuesRaw = getOptionsValuesRaw(dataDir);
+    panel.webview.html = getConfigDialogContent(allConfigsRaw, names2ConfigsRaw, optionValuesRaw);
 
     panel.webview.onDidReceiveMessage(
         message => {
@@ -125,7 +125,7 @@ function _configDialog(context: vscode.ExtensionContext) {
     );
 }
 
-function getAllConfigs(dataDir: string) {
+function getAllConfigsRaw(dataDir: string) {
     let configs: string[] = [];
     fs.readdirSync(path.join(dataDir, 'configs/')).forEach(fileName => {
         if (fileName.endsWith('.csv')) {
@@ -358,7 +358,7 @@ function setSliceConnections(connections: any[]) {
     sliceConnections = result;
 }
 
-function getHotspotInfluences(dataDir: string) {
+function getHotspotInfluencesRaw(dataDir: string) {
     let hotspotInfluences: { [key: string]: string[]; } = {};
     const regex = /\./g;
     parse(fs.readFileSync(path.join(dataDir, 'tracing', 'targets.csv'), 'utf8')).forEach((entry: string[]) => {
@@ -372,7 +372,7 @@ function getHotspotInfluences(dataDir: string) {
     return hotspotInfluences;
 }
 
-function getSliceSources(dataDir: string) {
+function getSliceSourcesRaw(dataDir: string) {
     let sources: { [key: string]: string[]; } = {};
     parse(fs.readFileSync(path.join(dataDir, 'tracing', 'sources.csv'), 'utf8')).forEach((entry: string[]) => {
         sources[entry[1]] = [entry[0], entry[2]];
@@ -399,11 +399,11 @@ function _slicing(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    commonSources = getSliceSources(dataDir);
+    commonSources = getSliceSourcesRaw(dataDir);
     slicingPanel.webview.html = getSlicingContent();
 
-    const sliceInfo = getSliceInfo(dataDir);
-    const port = sliceInfo.port;
+    const sliceInfoRaw = getSliceInfoRaw(dataDir);
+    const port = sliceInfoRaw.port;
     const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
     // Handle messages from the webview
     slicingPanel.webview.onDidReceiveMessage(
@@ -465,7 +465,7 @@ function _slicing(context: vscode.ExtensionContext) {
         context.subscriptions
     );
 
-    const hotspotInfluences = getHotspotInfluences(dataDir);
+    const hotspotInfluencesRaw = getHotspotInfluencesRaw(dataDir);
     vscode.window.onDidChangeActiveTextEditor(() => {
         if (!vscode.window.activeTextEditor) {
             return;
@@ -476,10 +476,10 @@ function _slicing(context: vscode.ExtensionContext) {
         editorPath = editorPath.replace(workspaceFolders[0].uri.path, "");
         editorPath = editorPath.replace("/src/main/java/", "");
 
-        if (editorPath in hotspotInfluences) {
+        if (editorPath in hotspotInfluencesRaw) {
             const hotspot = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
             let ranges: vscode.Range[] = [];
-            hotspotInfluences[editorPath].forEach(entry => {
+            hotspotInfluencesRaw[editorPath].forEach(entry => {
                 ranges.push(doc.lineAt((+entry - 1)).range);
             });
             vscode.window.activeTextEditor.setDecorations(hotspot, ranges);
@@ -514,7 +514,7 @@ function setFilesToHighlight(data: any[]) {
     });
 }
 
-function getSliceInfo(dataDir: string) {
+function getSliceInfoRaw(dataDir: string) {
     const sliceInfo = parse(fs.readFileSync(path.join(dataDir, 'sliceInfo.csv'), 'utf8'))[0];
     return {programName: sliceInfo[0], port: sliceInfo[1]};
 }
@@ -654,11 +654,13 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const sliceInfo = getSliceInfo(dataDir);
-    const programName = sliceInfo.programName;
-    let allConfigs = getAllConfigs(dataDir);
-    profilePanel.webview.html = getHotspotDiffContent(allConfigs);
+    const allConfigsRaw = getAllConfigsRaw(dataDir);
+    const names2ConfigsRaw = getNames2ConfigsRaw(dataDir);
+    const methods2ModelsRaw = getMethods2ModelsRaw(dataDir);
+    profilePanel.webview.html = getHotspotDiffContent(allConfigsRaw, names2ConfigsRaw, methods2ModelsRaw);
 
+    const sliceInfoRaw = getSliceInfoRaw(dataDir);
+    const programName = sliceInfoRaw.programName;
     const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
 
     // Handle messages from the webview
@@ -757,7 +759,7 @@ function openFileAndNavigate(uri: vscode.Uri, method: string) {
     });
 }
 
-function getHotspotDiffContent(rawConfigs: string[]) {
+function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
     let leftConfigs = "";
     for (const config of rawConfigs) {
         leftConfigs = leftConfigs.concat("<option value=\"");
@@ -788,6 +790,8 @@ function getHotspotDiffContent(rawConfigs: string[]) {
         rightConfigs = rightConfigs.concat("</option>");
     }
 
+    const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -814,6 +818,11 @@ function getHotspotDiffContent(rawConfigs: string[]) {
         <br>
         <div id="hotspot-diff-table"></div>
         <br>
+        <br>
+        <div style="font-size: 14px;"><b>Local Influencing Options</b></div>
+        <br>
+        <div id="influencingOptions"></div>
+        <br>
         <hr>
         <br>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
@@ -830,13 +839,40 @@ function getHotspotDiffContent(rawConfigs: string[]) {
                 document.getElementById("compareSelect").addEventListener("change", () => {
                     compareProfiles();
                 });
+                
+                const influencingOptionsTable = new Tabulator("#influencingOptions", {
+                    layout: "fitColumns",
+                    selectable: true,
+                    columns: [
+                        { title: "Options", field: "option", sorter: "string", formatter: formatInteractions }, 
+                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                    ],
+                });
+                function influenceSort(a, b) {
+                    let one = a.replace("+","");
+                    one = one.replace("-","");
+                    let two = b.replace("+","");
+                    two = two.replace("-","");
+                    return (+one) - (+two);
+                }
+                function formatInteractions(cell) {
+                    const val = cell.getValue();
+                    const entries = val.split(",");
+                    const cellDiv = document.createElement('div');
+                    for (let i = 0; i < entries.length; i++){
+                        const valItemDiv = document.createElement('div');
+                        valItemDiv.textContent = entries[i];
+                        cellDiv.appendChild(valItemDiv);
+                    }
+                    return cellDiv;
+                }
                                                
                 const table = new Tabulator("#hotspot-diff-table", {
                     // data: hotspotDiffData,
                     dataTree:true,
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
-                    rowFormatter: customRowFormatter,
+                    rowFormatter: formatBackground,
                     rowClick:openFile,
                     columns: [
                         {title: "Hot Spot", field: "method", sorter: "string"},
@@ -844,7 +880,7 @@ function getHotspotDiffContent(rawConfigs: string[]) {
                         {title: configToCompare, field: "config2", sorter: "number", hozAlign: "right"}
                     ],
                 }); 
-                function customRowFormatter(row) {
+                function formatBackground(row) {
                     const rowData = row.getData();
                     const config1 = rowData.config1;
                     const config2 = rowData.config2;
@@ -925,17 +961,17 @@ function _localModels(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const methodBasicInfo = getMethodsInfo(dataDir);
-    const methods2Models = getMethods2Models(dataDir);
-    const names2Configs = getNames2ConfigsRaw(dataDir);
+    const methodBasicInfoRaw = getMethodsInfoRaw(dataDir);
+    const methods2ModelsRaw = getMethods2ModelsRaw(dataDir);
+    const names2ConfigsRaw = getNames2ConfigsRaw(dataDir);
     localModelPanel.webview.postMessage({
-        methodBasicInfo: methodBasicInfo,
-        methods2Models: methods2Models,
-        names2Configs: names2Configs
+        methodBasicInfo: methodBasicInfoRaw,
+        methods2Models: methods2ModelsRaw,
+        names2Configs: names2ConfigsRaw
     });
 
-    const allConfigs = getAllConfigs(dataDir);
-    localModelPanel.webview.html = getLocalModelsContent(context, localModelPanel, allConfigs);
+    const allConfigsRaw = getAllConfigsRaw(dataDir);
+    localModelPanel.webview.html = getLocalModelsContent(context, localModelPanel, allConfigsRaw);
 
     // Handle messages from the webview
     localModelPanel.webview.onDidReceiveMessage(
@@ -963,7 +999,7 @@ function _localModels(context: vscode.ExtensionContext) {
     );
 }
 
-function getMethodsInfo(dataDir: string) {
+function getMethodsInfoRaw(dataDir: string) {
     let basicMethodInfo: BasicMethodInfo[] = [];
     parse(fs.readFileSync(path.join(dataDir, 'methods.csv'), 'utf8')).forEach((entry: string) => {
         basicMethodInfo.push({method: entry[0], defaultExecutionTime: entry[1], reportTime: +entry[2]});
@@ -971,7 +1007,7 @@ function getMethodsInfo(dataDir: string) {
     return basicMethodInfo;
 }
 
-function getOptionsValues(dataDir: string) {
+function getOptionsValuesRaw(dataDir: string) {
     return parse(fs.readFileSync(dataDir + '/options.csv', 'utf8'));
 }
 
@@ -985,7 +1021,7 @@ function getNames2ConfigsRaw(dataDir: string) {
     return names2Configs;
 }
 
-function getMethods2Models(dataDir: string) {
+function getMethods2ModelsRaw(dataDir: string) {
     let method2Models: Method2Model[] = [];
     fs.readdirSync(path.join(dataDir, 'localModels')).forEach(file => {
         const method = path.parse(file).name;
@@ -1016,10 +1052,10 @@ function _globalModel(context: vscode.ExtensionContext) {
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
     const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
-    const allConfigs = getAllConfigs(dataDir);
-    const names2Configs = getNames2ConfigsRaw(dataDir);
-    const methods2Models = getMethods2Models(dataDir);
-    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigs, names2Configs, methods2Models);
+    const allConfigsRaw = getAllConfigsRaw(dataDir);
+    const names2ConfigsRaw = getNames2ConfigsRaw(dataDir);
+    const methods2ModelsRaw = getMethods2ModelsRaw(dataDir);
+    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigsRaw, names2ConfigsRaw, methods2ModelsRaw);
 
     const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
 
