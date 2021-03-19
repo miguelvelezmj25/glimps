@@ -433,12 +433,17 @@ function _slicing(context: vscode.ExtensionContext) {
                         return;
                     }
 
+                    slicingPanel.dispose();
+
+                    OPTIONS_TO_ANALYZE = [];
+
                     targetClass = "";
                     target = -1;
                     sliceConnections = '';
                     filesToHighlight.clear();
                     traceStyle.dispose();
-                    slicingPanel.webview.html = getSlicingContent();
+
+                    vscode.commands.executeCommand('slicing.start');
                     return;
                 case 'slice':
                     if (!slicingPanel) {
@@ -533,14 +538,14 @@ function getSliceInfoRaw(dataDir: string) {
 }
 
 function getSlicingContent() {
-    console.log(OPTIONS_TO_ANALYZE);
+    const optionsToAnalyze = new Set(OPTIONS_TO_ANALYZE);
     let commonSourcesSelect = '';
     Object.entries(commonSources).forEach(entry => {
         commonSourcesSelect = commonSourcesSelect.concat('<div style="font-size: 14px;">\n');
         commonSourcesSelect = commonSourcesSelect.concat('<input type="checkbox" id="');
         commonSourcesSelect = commonSourcesSelect.concat(entry[0]);
         commonSourcesSelect = commonSourcesSelect.concat('" name="source-checkbox" ');
-        if (selectedCommonSources.has(entry[0])) {
+        if (optionsToAnalyze.has(entry[0])) {
             commonSourcesSelect = commonSourcesSelect.concat(' checked');
         }
         commonSourcesSelect = commonSourcesSelect.concat('>\n');
