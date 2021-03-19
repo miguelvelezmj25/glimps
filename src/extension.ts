@@ -819,7 +819,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <div id="hotspot-diff-table"></div>
         <br>
         <br>
-        <div style="font-size: 14px;"><b>Local Influencing Options</b></div>
+        <div id="local-model-method" style="font-size: 14px;"><b>Local Influencing Options for:</b></div>
         <br>
         <div id="influencingOptions"></div>
         <br>
@@ -945,6 +945,8 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                             influencingOptionsTable.setData(model.model);
                         }
                     });
+                    
+                    document.getElementById("local-model-method").innerHTML = "<b>Local Influencing Options for:</b> " + hotspotRow.getData().method;
                 }
                 
                 // document.getElementById("local-influence-trigger").addEventListener("click", function () {    
