@@ -701,9 +701,8 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                             }
                         }
                     );
-                    const response = res.getBody() + "";
-                    allConfigs = getAllConfigs(dataDir);
-                    profilePanel.webview.html = getHotspotDiffContent(allConfigs, config1, config2, response);
+                    const response = JSON.parse(res.getBody() + "");
+                    profilePanel.webview.postMessage({response: response.data});
                     return;
                 case 'localInfluence' :
                     if (localModelPanel) {
@@ -787,56 +786,55 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
         <hr>
         <br>
         <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
-        <script type="text/javascript">         
-            const configToProfile = document.getElementById("configSelect").value;
-            const configToCompare = document.getElementById("compareSelect").value;
-                                      
-            const hotspotDiffData = [${hotspotDiffData}];      
-            const table = new Tabulator("#hotspot-diff-table", {
-                data: hotspotDiffData,
-                dataTree:true,
-                dataTreeStartExpanded:false,
-                movableColumns: true, 
-                rowFormatter: customRowFormatter,
-                columns: [
-                    {title: "Hot Spot", field: "method", sorter: "string"},
-                    {title: configToProfile, field: "config1", sorter: "number", hozAlign: "right"},
-                    {title: configToCompare, field: "config2", sorter: "number", hozAlign: "right"}
-                ],
-            }); 
-            
-            // if(table.getColumn("config1").getDefinition().title === "Config1" || table.getColumn("config2").getDefinition().title === "Config2") {
-            //     table.getColumn("config1").delete();
-            //     table.getColumn("config2").delete();
-            // }
-            // else if(table.getColumn("config1").getDefinition().title === table.getColumn("config2").getDefinition().title) {
-            //     table.getColumn("config2").delete();
-            // }
-            
-            function customRowFormatter(row) {
-                const rowData = row.getData();
-                const config1 = rowData.config1;
-                const config2 = rowData.config2;
-                
-                if(config1 === "Not executed" || config2 === "Not executed"){
-                    for(let i = 1; i < row.getCells().length; i++) {
-                        row.getCells()[i].getElement().style.backgroundColor = "#fbf9f9";
-                        row.getCells()[i].getElement().style.color = "#990000";
-                        row.getCells()[i].getElement().style.fontWeight = "bold";
-                    }
-                }
-                
-                if(Math.abs((+config1) - (+config2)) > 1.0){
-                    for(let i = 1; i < row.getCells().length; i++) {
-                        row.getCells()[i].getElement().style.backgroundColor = "#f9f9fb";
-                        row.getCells()[i].getElement().style.color = "#000066";
-                        row.getCells()[i].getElement().style.fontWeight = "bold";
-                    }
-                } 
-            }       
-            
+        <script type="text/javascript">                  
             (function () {
                 const vscode = acquireVsCodeApi();
+                const configToProfile = document.getElementById("configSelect").value;
+                const configToCompare = document.getElementById("compareSelect").value;
+                
+                document.getElementById("configSelect").addEventListener("change", () => {
+                    compareProfiles();
+                });
+                
+                document.getElementById("compareSelect").addEventListener("change", () => {
+                    compareProfiles();
+                });
+                                          
+                // const hotspotDiffData = [{hotspotDiffData}];      
+                const table = new Tabulator("#hotspot-diff-table", {
+                    // data: hotspotDiffData,
+                    dataTree:true,
+                    dataTreeStartExpanded:false,
+                    movableColumns: true, 
+                    rowFormatter: customRowFormatter,
+                    columns: [
+                        {title: "Hot Spot", field: "method", sorter: "string"},
+                        {title: configToProfile, field: "config1", sorter: "number", hozAlign: "right"},
+                        {title: configToCompare, field: "config2", sorter: "number", hozAlign: "right"}
+                    ],
+                }); 
+                                
+                function customRowFormatter(row) {
+                    const rowData = row.getData();
+                    const config1 = rowData.config1;
+                    const config2 = rowData.config2;
+                    
+                    if(config1 === "Not executed" || config2 === "Not executed"){
+                        for(let i = 1; i < row.getCells().length; i++) {
+                            row.getCells()[i].getElement().style.backgroundColor = "#fbf9f9";
+                            row.getCells()[i].getElement().style.color = "#990000";
+                            row.getCells()[i].getElement().style.fontWeight = "bold";
+                        }
+                    }
+                    
+                    if(Math.abs((+config1) - (+config2)) > 1.0){
+                        for(let i = 1; i < row.getCells().length; i++) {
+                            row.getCells()[i].getElement().style.backgroundColor = "#f9f9fb";
+                            row.getCells()[i].getElement().style.color = "#000066";
+                            row.getCells()[i].getElement().style.fontWeight = "bold";
+                        }
+                    } 
+                }   
                 
                 // document.getElementById("local-influence-trigger").addEventListener("click", function () {    
                 //     vscode.postMessage({
@@ -844,21 +842,26 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
                 //     });
                 // });
                 //
-                // document.getElementById("hotspot-trigger").addEventListener("click", function () {
-                //     const configs = [];
-                //     for (const option of document.getElementById('config-select').options) {
-                //         if (option.selected) {
-                //             configs.push(option.value);
-                //         }
-                //     }
-                //     if(configs.length === 0) {
-                //         return;
-                //     }
-                //     vscode.postMessage({
-                //         command: 'diff',
-                //         configs: configs
-                //     });
-                // });
+                function compareProfiles() {
+                    const configs = [];
+                    configs.push(document.getElementById("configSelect").value);
+                    configs.push(document.getElementById("compareSelect").value);
+                    vscode.postMessage({
+                        command: 'diff',
+                        configs: configs
+                    });
+                }
+                compareProfiles();
+                
+                window.addEventListener('message', event => {
+                    table.deleteColumn("config1");
+                    table.deleteColumn("config2");
+                    table.addColumn({title:document.getElementById("configSelect").value, field:"config1"});
+                    table.addColumn({title:document.getElementById("compareSelect").value, field:"config2"});
+                    
+                    const resp = event.data.response;
+                    table.setData(resp);
+                });
             }())
         </script>
     </body>
