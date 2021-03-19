@@ -23,7 +23,6 @@ let METHOD_TO_PROFILE: string = '';
 let OPTIONS_TO_ANALYZE: string[] = [];
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
-let localModelPanel: vscode.WebviewPanel | undefined = undefined;
 let profilePanel: vscode.WebviewPanel | undefined = undefined;
 let slicingPanel: vscode.WebviewPanel | undefined = undefined;
 
@@ -43,7 +42,6 @@ export function activate(context: vscode.ExtensionContext) {
     // The commandId parameter must match the command field in package.json
     const configDialog = vscode.commands.registerCommand('configDialog.start', () => _configDialog(context));
     const globalModel = vscode.commands.registerCommand('globalModel.start', () => _globalModel(context));
-    // const localModels = vscode.commands.registerCommand('localModels.start', () => _localModels(context));
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', () => _sliceTarget(context));
     const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
@@ -827,9 +825,9 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <br>
         <div id="influencingOptions"></div>
         <br>
-        <hr>
-        <br>
-        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>
+<!--        <hr>-->
+<!--        <br>-->
+<!--        <div style="display: inline;"><button id="local-influence-trigger">View Local Performance Influence</button></div>-->
         <script type="text/javascript">                  
             (function () {
                 const vscode = acquireVsCodeApi();
@@ -1019,71 +1017,6 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
     </html>`;
 }
 
-function _localModels(context: vscode.ExtensionContext) {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-        deactivate();
-        return;
-    }
-
-    // Create and show a new webview
-    localModelPanel = vscode.window.createWebviewPanel(
-        'localModels', // Identifies the type of the webview. Used internally
-        'Local Performance Influence', // Title of the panel displayed to the user
-        vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
-        {
-            enableScripts: true,
-            retainContextWhenHidden: true // Might be expensive
-        } // Webview options. More on these later.
-    );
-
-    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const methodBasicInfoRaw = getMethodsInfoRaw(dataDir);
-    const methods2ModelsRaw = getMethods2ModelsRaw(dataDir);
-    const names2ConfigsRaw = getNames2ConfigsRaw(dataDir);
-    localModelPanel.webview.postMessage({
-        methodBasicInfo: methodBasicInfoRaw,
-        methods2Models: methods2ModelsRaw,
-        names2Configs: names2ConfigsRaw
-    });
-
-    const allConfigsRaw = getAllConfigsRaw(dataDir);
-    localModelPanel.webview.html = getLocalModelsContent(context, localModelPanel, allConfigsRaw);
-
-    // Handle messages from the webview
-    localModelPanel.webview.onDidReceiveMessage(
-        message => {
-            switch (message.command) {
-                case 'slice' :
-                    if (slicingPanel) {
-                        slicingPanel.reveal();
-                    } else {
-                        vscode.commands.executeCommand('slicing.start');
-                    }
-                    return;
-            }
-        },
-        undefined,
-        context.subscriptions
-    );
-
-    localModelPanel.onDidDispose(
-        () => {
-            localModelPanel = undefined;
-        },
-        null,
-        context.subscriptions
-    );
-}
-
-function getMethodsInfoRaw(dataDir: string) {
-    let basicMethodInfo: BasicMethodInfo[] = [];
-    parse(fs.readFileSync(path.join(dataDir, 'methods.csv'), 'utf8')).forEach((entry: string) => {
-        basicMethodInfo.push({method: entry[0], defaultExecutionTime: entry[1], reportTime: +entry[2]});
-    });
-    return basicMethodInfo;
-}
-
 function getOptionsValuesRaw(dataDir: string) {
     return parse(fs.readFileSync(dataDir + '/options.csv', 'utf8'));
 }
@@ -1172,53 +1105,6 @@ function _globalModel(context: vscode.ExtensionContext) {
         null,
         context.subscriptions
     );
-}
-
-function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, rawConfigs: string[]) {
-    const localModelsScriptPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'localModels.js'));
-    const localModelsScript = panel.webview.asWebviewUri(localModelsScriptPath);
-
-    const configs = getConfigs(rawConfigs);
-
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tabulator Example</title>
-        <link href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/tabulator_simple.min.css" rel="stylesheet">
-        <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
-    </head>
-    <body>
-        <div>
-            <label for="methodSelect"><b>Select method:</b></label>
-            <select name="methodSelect" id="methodSelect"></select>     
-        </div>
-        <div style="display: inline;"><b>Select configuration:</b></div>
-        <div style="display: inline;">
-            <select name="configSelect" id="configSelect">
-                ${configs}
-            </select>
-        </div>
-        <div style="display: inline;"><button id="view-influence-trigger">View Influence</button></div>
-        <br>
-        <hr>
-        <br>
-        <br>
-        <div id="methodName" style="font-size: 14px;">&nbsp;</div>
-        <div id="selected-config-name" style="font-size: 14px;">&nbsp;</div>
-        <div id="selected-config-time" style="font-size: 14px;">&nbsp;</div>
-        <br>
-        <div id="defaultExecutionTime" style="font-size: 14px;">&nbsp;</div>
-        <br>
-        <div id="local-model-table"></div>
-        <br>
-        <hr>
-        <br>
-        <div style="display: inline;"><button id="slice-trigger">Trace Options</button></div>
-        <script src="${localModelsScript}"></script>
-    </body>
-    </html>`;
 }
 
 function getNames2PerfModels(names2ConfigsRaw: any, perfModel: string) {
@@ -1355,7 +1241,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                 ${configs}
             </select>
         </div>
-        <div style="display: inline; font-size: 14px;">compare to: TODO? </div>
+<!--        <div style="display: inline; font-size: 14px;">compare to: TODO? </div>-->
 <!--        <div style="display: inline;">-->
 <!--            <select name="compareSelect" id="compareSelect">-->
 <!--                            // {configs} -->
@@ -1577,12 +1463,6 @@ function getPerfModel(rawPerfModel: string[]) {
         perfModel = perfModel.concat('" },');
     }
     return perfModel.concat("]");
-}
-
-interface BasicMethodInfo {
-    method: string
-    defaultExecutionTime: string
-    reportTime: number
 }
 
 interface Method2Model {
