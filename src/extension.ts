@@ -867,6 +867,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                                                
                 const table = new Tabulator("#hotspot-diff-table", {
+                    layout:"fitData",
                     dataTree:true,
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
