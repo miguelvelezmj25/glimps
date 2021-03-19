@@ -434,12 +434,13 @@ function _slicing(context: vscode.ExtensionContext) {
         message => {
             const regex = /\./g;
             switch (message.command) {
-                case 'link':
+                case 'link': {
                     const className = message.method.substring(0, message.method.lastIndexOf('.')).replace(regex, '/');
                     const method = message.method.substring(message.method.indexOf('\n') + 1);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     openFileAndNavigate(uri, method);
                     return;
+                }
                 case 'clear':
                     if (!slicingPanel) {
                         return;
@@ -454,7 +455,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     slicingPanel.dispose();
                     vscode.commands.executeCommand('slicing.start');
                     return;
-                case 'slice':
+                case 'slice': {
                     OPTIONS_TO_ANALYZE = message.selectedOptions;
 
                     if (!slicingPanel) {
@@ -462,6 +463,10 @@ function _slicing(context: vscode.ExtensionContext) {
                     }
                     if (message.selectedOptions.length === 0 || targetClass === "" || target <= 0) {
                         vscode.window.showErrorMessage("Select options and hotspots for tracing");
+                        
+                        filesToHighlight.clear();
+                        traceStyle.dispose();
+                        slicingPanel.webview.postMessage({connections: {}});
                         return;
                     }
 
@@ -483,7 +488,13 @@ function _slicing(context: vscode.ExtensionContext) {
                     const response = JSON.parse(res.getBody() + "");
                     setFilesToHighlight(response.slice);
                     slicingPanel.webview.postMessage({connections: getSliceConnections(response.connections)});
+
+                    const className = commonSources[message.selectedOptions[0]][2].replace(regex, '/');
+                    const method = 'main';
+                    let uri = vscode.Uri.file(filesRoot + className + '.java');
+                    openFileAndNavigate(uri, method);
                     return;
+                }
             }
         },
         undefined,
@@ -604,7 +615,7 @@ function getSlicingContent() {
                 
                 window.addEventListener('message', event => {
                     short2Methods.clear();
-                    if(event.data.connections.key.length === 0) {
+                    if(!event.data.connections.hasOwnProperty('key') || event.data.connections.key.length === 0) {
                         d3.select("#connection-graph").graphviz()
                             .renderDot('digraph { node [shape=box fillcolor=white style=filled fontcolor=red fontsize=24] "No trace" }').zoom(false);
                         return
