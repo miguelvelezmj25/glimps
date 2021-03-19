@@ -829,8 +829,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <script type="text/javascript">                  
             (function () {
                 const vscode = acquireVsCodeApi();
-                const configToProfile = document.getElementById("configSelect").value;
-                const configToCompare = document.getElementById("compareSelect").value;
+                const names2LocalModels = ${names2LocalModels};
                 
                 document.getElementById("configSelect").addEventListener("change", () => {
                     compareProfiles();
@@ -868,18 +867,22 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                                                
                 const table = new Tabulator("#hotspot-diff-table", {
-                    // data: hotspotDiffData,
                     dataTree:true,
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
+                    selectable: true,
                     rowFormatter: formatBackground,
                     rowClick:openFile,
+                    rowSelectionChanged:showInfluence,
                     columns: [
                         {title: "Hot Spot", field: "method", sorter: "string"},
-                        {title: configToProfile, field: "config1", sorter: "number", hozAlign: "right"},
-                        {title: configToCompare, field: "config2", sorter: "number", hozAlign: "right"}
+                        {title: document.getElementById("configSelect").value, field: "config1", sorter: "number", hozAlign: "right"},
+                        {title: document.getElementById("compareSelect").value, field: "config2", sorter: "number", hozAlign: "right"},
+                        {title: "hotspot", field: "hotspot"}
                     ],
                 }); 
+                table.hideColumn("hotspot");
+                
                 function formatBackground(row) {
                     const rowData = row.getData();
                     const config1 = rowData.config1;
@@ -901,11 +904,43 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         }
                     } 
                 }
+                
                 function openFile(e, row){
                     const file = row.getData().method;
                     vscode.postMessage({
                         command: 'open-hotspot',
                         method: file,
+                    }); 
+                }
+                
+                let selectedRow = undefined;
+                function showInfluence(data, rows) {
+                    if(rows.length === 0) {
+                        influencingOptionsTable.setData([]);
+                        return;
+                    }
+                    if(rows.length === 1) {
+                        selectedRow = rows[0];
+                    }
+                    else {
+                        selectedRow.deselect();
+                        rows = rows.splice(rows.indexOf(selectedRow), 1);
+                        selectedRow = rows[0];
+                        return;
+                    }
+                    
+                    let hotspotRow = selectedRow;
+                    while(hotspotRow.getTreeParent() !== false) {
+                        hotspotRow = hotspotRow.getTreeParent();
+                    }
+                    let method = hotspotRow.getData().method;
+                    method = method.substring(0, method.indexOf("("));
+                    const config = document.getElementById("configSelect").value;
+                    const models = names2LocalModels[config];
+                    models.forEach(model => {
+                        if(model.method === method) {
+                            influencingOptionsTable.setData(model.model);
+                        }
                     });
                 }
                 
@@ -927,6 +962,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 compareProfiles();
                 
                 window.addEventListener('message', event => {
+                    table.hideColumn("hotspot");
                     table.deleteColumn("config1");
                     table.deleteColumn("config2");
                     console.log("TODO DELETE SECOND COLUMN IF THE SAME CONFIG WAS SELECTED");
