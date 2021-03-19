@@ -19,6 +19,7 @@ let sliceConnections = '';
 
 let CONFIG_TO_PROFILE: string = '';
 let CONFIG_TO_COMPARE: string = '';
+let METHOD_TO_PROFILE: string = '';
 
 let globalModelPanel: vscode.WebviewPanel | undefined = undefined;
 let localModelPanel: vscode.WebviewPanel | undefined = undefined;
@@ -791,6 +792,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
     }
 
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
+    const methodToProfile = '{ method: "' + METHOD_TO_PROFILE + '" }';
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -830,6 +832,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
             (function () {
                 const vscode = acquireVsCodeApi();
                 const names2LocalModels = ${names2LocalModels};
+                const methodToProfile = ${methodToProfile}.method;
                 
                 document.getElementById("configSelect").addEventListener("change", () => {
                     compareProfiles();
@@ -994,6 +997,12 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     
                     const resp = event.data.response;
                     table.setData(resp);
+                    
+                    table.getRows().forEach(row => {
+                        if(row.getData().methodLong.startsWith(methodToProfile)) {
+                            row.select();
+                        }
+                    });
                 });
             }())
         </script>
@@ -1135,6 +1144,7 @@ function _globalModel(context: vscode.ExtensionContext) {
                     openFileAndNavigate(uri, method);
 
                     CONFIG_TO_PROFILE = message.config;
+                    METHOD_TO_PROFILE = message.method;
                     if (profilePanel) {
                         profilePanel.dispose();
                     }
