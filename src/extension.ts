@@ -965,9 +965,15 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     table.hideColumn("hotspot");
                     table.deleteColumn("config1");
                     table.deleteColumn("config2");
-                    console.log("TODO DELETE SECOND COLUMN IF THE SAME CONFIG WAS SELECTED");
-                    table.addColumn({title:document.getElementById("configSelect").value, field:"config1"});
-                    table.addColumn({title:document.getElementById("compareSelect").value, field:"config2"});
+                    
+                    const configToSelect = document.getElementById("configSelect").value;
+                    const compareSelect = document.getElementById("compareSelect").value
+                    
+                    table.addColumn({title:configToSelect, field:"config1"});
+                    table.addColumn({title:compareSelect, field:"config2"});
+                    if(configToSelect === compareSelect) {
+                        table.deleteColumn("config2");
+                    }
                     
                     const resp = event.data.response;
                     table.setData(resp);
