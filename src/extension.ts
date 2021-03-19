@@ -132,7 +132,7 @@ function getAllConfigs(dataDir: string) {
     return configs;
 }
 
-function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
+function getConfigs(rawConfigs: string[]) {
     let configs = "";
     for (const config of rawConfigs) {
         configs = configs.concat("<option value=\"");
@@ -141,6 +141,11 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         configs = configs.concat(config);
         configs = configs.concat("</option>");
     }
+    return configs;
+}
+
+function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
+    const configs = getConfigs(rawConfigs);
 
     let names2Configs = '{';
     for (let i = 0; i < names2ConfigsRaw.length; i++) {
@@ -896,14 +901,6 @@ function getHotspotDiffContent(rawConfigs: string[], config1: string, config2: s
     </html>`;
 }
 
-function getConfigs(dataDir: string) {
-    let configs: string[] = [];
-    parse(fs.readFileSync(path.join(dataDir, 'configs.txt'), 'utf8')).forEach((entry: string) => {
-        configs.push(entry);
-    });
-    return configs;
-}
-
 function _localModels(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
@@ -1062,14 +1059,8 @@ function _globalModel(context: vscode.ExtensionContext) {
 function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, rawConfigs: string[]) {
     const localModelsScriptPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'localModels.js'));
     const localModelsScript = panel.webview.asWebviewUri(localModelsScriptPath);
-    let configs = "";
-    for (const config of rawConfigs) {
-        configs = configs.concat("<option value=\"");
-        configs = configs.concat(config);
-        configs = configs.concat("\">");
-        configs = configs.concat(config);
-        configs = configs.concat("</option>");
-    }
+
+    const configs = getConfigs(rawConfigs);
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -1112,17 +1103,10 @@ function getLocalModelsContent(context: vscode.ExtensionContext, panel: vscode.W
     </html>`;
 }
 
+
 function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
     const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
-
-    let configs = "";
-    for (const config of rawConfigs) {
-        configs = configs.concat("<option value=\"");
-        configs = configs.concat(config);
-        configs = configs.concat("\">");
-        configs = configs.concat(config);
-        configs = configs.concat("</option>");
-    }
+    const configs = getConfigs(rawConfigs);
 
     let names2Configs = '{';
     for (let i = 0; i < names2ConfigsRaw.length; i++) {
