@@ -697,10 +697,9 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                 case 'open-influence' :
                     CONFIG_TO_PROFILE = message.config;
                     if (globalModelPanel) {
-                        globalModelPanel.reveal();
-                    } else {
-                        vscode.commands.executeCommand('globalModel.start');
+                        globalModelPanel.dispose();
                     }
+                    vscode.commands.executeCommand('globalModel.start');
                     return;
                 case 'open-hotspot' :
                     let methodData = message.method;
@@ -1137,10 +1136,9 @@ function _globalModel(context: vscode.ExtensionContext) {
 
                     CONFIG_TO_PROFILE = message.config;
                     if (profilePanel) {
-                        profilePanel.reveal();
-                    } else {
-                        vscode.commands.executeCommand('perfProfiles.start');
+                        profilePanel.dispose();
                     }
+                    vscode.commands.executeCommand('perfProfiles.start');
                     return;
             }
         },
