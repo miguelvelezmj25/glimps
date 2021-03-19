@@ -209,7 +209,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <div id="displayConfig"></div>
         <br>
         <br>
-        <div style="display: inline;"><button id="global-influence-trigger">View Options' Influence</button></div>
+        <div style="display: inline; padding-right: 10px;"><button id="global-influence-trigger">View Options' Influence</button></div>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <br>
         <br>
