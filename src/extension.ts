@@ -451,23 +451,12 @@ function _slicing(context: vscode.ExtensionContext) {
                     openFileAndNavigate(uri, method);
                     return;
                 }
-                case 'clear':
-                    if (!slicingPanel) {
-                        return;
-                    }
-
-                    targetClass = "";
-                    target = -1;
-
-                    OPTIONS_TO_ANALYZE = [];
-                    filesToHighlight.clear();
-                    traceStyle.dispose();
-                    sourceStyle.dispose();
-                    slicingPanel.dispose();
-                    vscode.commands.executeCommand('slicing.start');
-                    return;
                 case 'slice': {
                     OPTIONS_TO_ANALYZE = message.selectedOptions;
+                    if (message.target) {
+                        targetClass = "";
+                        target = -1;
+                    }
 
                     if (!slicingPanel) {
                         return;
@@ -582,8 +571,8 @@ function getSlicingContent() {
     const optionsToAnalyze = new Set(OPTIONS_TO_ANALYZE);
     let commonSourcesSelect = '';
     Object.entries(commonSources).forEach(entry => {
-        commonSourcesSelect = commonSourcesSelect.concat('<div style="font-size: 14px;">\n');
-        commonSourcesSelect = commonSourcesSelect.concat('<input type="checkbox" id="');
+        commonSourcesSelect = commonSourcesSelect.concat('<div>\n');
+        commonSourcesSelect = commonSourcesSelect.concat('&nbsp; <input type="checkbox" id="');
         commonSourcesSelect = commonSourcesSelect.concat(entry[0]);
         commonSourcesSelect = commonSourcesSelect.concat('" name="source-checkbox" ');
         if (optionsToAnalyze.has(entry[0])) {
@@ -598,10 +587,18 @@ function getSlicingContent() {
         commonSourcesSelect = commonSourcesSelect.concat('</div>\n');
     });
 
-    let targetList = '<ul><li>Select a hotspot</li></ul>';
+    let selectedTarget = '<div id="selectedTarget">';
     if (target > 0) {
-        targetList = '<ul><li id="hotspot">' + targetClass + ":" + target + '</li></ul>';
+        selectedTarget = selectedTarget.concat('&nbsp; <input type="checkbox" id="target-checkbox" name="target-checkbox" ');
+        selectedTarget = selectedTarget.concat(' checked>\n');
+        selectedTarget = selectedTarget.concat('<label for="target">');
+        selectedTarget = selectedTarget.concat(targetClass + ":" + target);
+        selectedTarget = selectedTarget.concat('</label>');
     }
+    else {
+        selectedTarget = selectedTarget.concat('&nbsp; Select a hotspot');
+    }
+    selectedTarget = selectedTarget.concat('</div>');
 
     return `<!DOCTYPE html>
     <html lang="en">
@@ -618,11 +615,11 @@ function getSlicingContent() {
         <br>
         ${commonSourcesSelect}
         <br>
-        <div>
-            <b>Hotspot:</b> ${targetList} 
-        </div>
+        <div style="font-size: 14px;"><b>Hotspot:</b></div>
         <br>
-        <div style="display: inline; padding-right: 10px;"><button id="clear-trigger">Clear</button></div>
+        ${selectedTarget}
+        <br>
+        <br>
         <div style="display: inline; padding-right: 10px;"><button id="global-influence-trigger">View Options' Influence</button></div>
         <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <br>
@@ -672,13 +669,7 @@ function getSlicingContent() {
                         d3.select(this).style("text-decoration", "");
                     })
                 }
-                
-                document.getElementById("clear-trigger").addEventListener("click", function () {                    
-                    vscode.postMessage({
-                        command: 'clear'
-                    });
-                });
-                
+                                
                 document.getElementsByName("source-checkbox").forEach( element => {
                     element.addEventListener("change", () => {
                         let selectOptions = [];
@@ -691,6 +682,21 @@ function getSlicingContent() {
                             command: 'slice',
                             selectedOptions: selectOptions
                         });
+                    });
+                });
+                
+                document.getElementById("target-checkbox").addEventListener("change", function () {
+                    document.getElementById("selectedTarget").innerHTML = '&nbsp; Select a hotspot';
+                    let selectOptions = [];
+                    document.getElementsByName("source-checkbox").forEach(element => {
+                        if(element.checked) {
+                            selectOptions.push(element.id);
+                        }
+                    })
+                    vscode.postMessage({
+                        command: 'slice',
+                        selectedOptions: selectOptions,
+                        target: true
                     });
                 });
                 
