@@ -14,7 +14,7 @@ let target: number = -1;
 
 let traceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let hotspotStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
-let sourceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
+let sourceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(0,255,0,0.25)'});
 let filesToHighlight = new Map<String, Set<String>>();
 
 let CONFIG_TO_PROFILE: string = '';
@@ -429,10 +429,10 @@ function _slicing(context: vscode.ExtensionContext) {
     const sliceInfoRaw = getSliceInfoRaw(dataDir);
     const port = sliceInfoRaw.port;
     const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
+    const regex = /\./g;
     // Handle messages from the webview
     slicingPanel.webview.onDidReceiveMessage(
         message => {
-            const regex = /\./g;
             switch (message.command) {
                 case 'link': {
                     const className = message.method.substring(0, message.method.lastIndexOf('.')).replace(regex, '/');
@@ -452,6 +452,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     OPTIONS_TO_ANALYZE = [];
                     filesToHighlight.clear();
                     traceStyle.dispose();
+                    sourceStyle.dispose();
                     slicingPanel.dispose();
                     vscode.commands.executeCommand('slicing.start');
                     return;
@@ -463,7 +464,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     }
                     if (message.selectedOptions.length === 0 || targetClass === "" || target <= 0) {
                         vscode.window.showErrorMessage("Select options and hotspots for tracing");
-                        
+
                         filesToHighlight.clear();
                         traceStyle.dispose();
                         slicingPanel.webview.postMessage({connections: {}});
@@ -501,6 +502,7 @@ function _slicing(context: vscode.ExtensionContext) {
         context.subscriptions
     );
 
+    const sourcesFile = commonSources[Object.keys(commonSources)[0]][2].replace(regex, '/') + '.java';
     const hotspotInfluencesRaw = getHotspotInfluencesRaw(dataDir);
     vscode.window.onDidChangeActiveTextEditor(() => {
         if (!vscode.window.activeTextEditor) {
@@ -520,6 +522,16 @@ function _slicing(context: vscode.ExtensionContext) {
                 ranges.push(doc.lineAt((+entry - 1)).range);
             });
             vscode.window.activeTextEditor.setDecorations(hotspotStyle, ranges);
+        }
+
+        if (editorPath === sourcesFile) {
+            sourceStyle.dispose();
+            sourceStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(0,255,0,0.25)'});
+            let ranges: vscode.Range[] = [];
+            OPTIONS_TO_ANALYZE.forEach(entry => {
+                ranges.push(doc.lineAt(+commonSources[entry][1] - 1).range);
+            });
+            vscode.window.activeTextEditor.setDecorations(sourceStyle, ranges);
         }
 
         const lines = filesToHighlight.get(editorPath);
