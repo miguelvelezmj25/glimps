@@ -343,7 +343,7 @@ function getShortSliceMethod(method: string) {
     return entries[entries.length - 2] + "." + entries[entries.length - 1] + "(...)";
 }
 
-function getSliceConnections(connections: any[]) {
+function getSliceConnections(connections: any[], targetMethodName: string) {
     let short2Methods = new Map<string, string>();
     let sliceConnections = '';
     connections.forEach(entry => {
@@ -367,6 +367,11 @@ function getSliceConnections(connections: any[]) {
     sliceConnections = sliceConnections.concat(getShortSliceMethod(commonSources[OPTIONS_TO_ANALYZE[0]][0]));
     sliceConnections = sliceConnections.concat('"');
     sliceConnections = sliceConnections.concat(' [fillcolor=lawngreen style=filled] ');
+    sliceConnections = sliceConnections.concat('"');
+    targetMethodName = targetMethodName.substring(0, targetMethodName.indexOf("("));
+    sliceConnections = sliceConnections.concat(getShortSliceMethod(targetMethodName));
+    sliceConnections = sliceConnections.concat('"');
+    sliceConnections = sliceConnections.concat(' [fillcolor=lightsalmon2 style=filled] ');
     return {connections: sliceConnections, key: JSON.parse(JSON.stringify([...short2Methods]))};
 }
 
@@ -493,7 +498,7 @@ function _slicing(context: vscode.ExtensionContext) {
                     );
                     const response = JSON.parse(res.getBody() + "");
                     setFilesToHighlight(response.slice);
-                    slicingPanel.webview.postMessage({connections: getSliceConnections(response.connections)});
+                    slicingPanel.webview.postMessage({connections: getSliceConnections(response.connections, response.targetMethodName)});
 
                     const className = commonSources[message.selectedOptions[0]][2].replace(regex, '/');
                     const method = 'main';
