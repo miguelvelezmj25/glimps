@@ -114,7 +114,7 @@ function _configDialog(context: vscode.ExtensionContext) {
                         if (err) {
                             vscode.window.showErrorMessage("Error saving configuration");
                         } else {
-                            vscode.window.showErrorMessage("Configuration saved");
+                            vscode.window.showInformationMessage("Configuration saved");
                         }
                     });
                     return;
@@ -462,8 +462,6 @@ function _slicing(context: vscode.ExtensionContext) {
                         return;
                     }
                     if (message.selectedOptions.length === 0 || targetClass === "" || target <= 0) {
-                        vscode.window.showErrorMessage("Select options and hotspots for tracing");
-
                         filesToHighlight.clear();
                         traceStyle.dispose();
                         slicingPanel.webview.postMessage({connections: {}});
