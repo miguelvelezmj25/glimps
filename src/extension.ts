@@ -362,6 +362,11 @@ function getSliceConnections(connections: any[]) {
         sliceConnections = sliceConnections.concat(shortTarget);
         sliceConnections = sliceConnections.concat('" ');
     });
+
+    sliceConnections = sliceConnections.concat('"');
+    sliceConnections = sliceConnections.concat(getShortSliceMethod(commonSources[OPTIONS_TO_ANALYZE[0]][0]));
+    sliceConnections = sliceConnections.concat('"');
+    sliceConnections = sliceConnections.concat(' [fillcolor=lawngreen style=filled] ');
     return {connections: sliceConnections, key: JSON.parse(JSON.stringify([...short2Methods]))};
 }
 
