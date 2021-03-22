@@ -441,7 +441,7 @@ function _slicing(context: vscode.ExtensionContext) {
             switch (message.command) {
                 case 'link': {
                     const className = message.method.substring(0, message.method.lastIndexOf('.')).replace(regex, '/');
-                    const method = message.method.substring(message.method.indexOf('\n') + 1);
+                    const method = message.method.substring(message.method.lastIndexOf('.') + 1);
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     openFileAndNavigate(uri, method);
                     return;
