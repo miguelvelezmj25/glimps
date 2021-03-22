@@ -487,7 +487,10 @@ function _slicing(context: vscode.ExtensionContext) {
                     );
                     const response = JSON.parse(res.getBody() + "");
                     setFilesToHighlight(response.slice);
-                    slicingPanel.webview.postMessage({connections: getSliceConnections(response.connections, response.targetMethodName)});
+                    slicingPanel.webview.postMessage({
+                        connections: getSliceConnections(response.connections, response.targetMethodName),
+                        targetMethodName: response.targetMethodName
+                    });
 
                     const className = commonSources[message.selectedOptions[0]][2].replace(regex, '/');
                     const method = 'main';
@@ -495,6 +498,22 @@ function _slicing(context: vscode.ExtensionContext) {
                     openFileAndNavigate(uri, method);
                     return;
                 }
+                case 'globalInfluence' :
+                    OPTIONS_TO_ANALYZE = message.options;
+                    METHOD_TO_PROFILE = message.target.substring(0, message.target.indexOf("("));
+                    if (globalModelPanel) {
+                        globalModelPanel.dispose();
+                    }
+                    vscode.commands.executeCommand('globalModel.start');
+                    return;
+                case 'profile' :
+                    OPTIONS_TO_ANALYZE = message.options;
+                    METHOD_TO_PROFILE = message.target.substring(0, message.target.indexOf("("));
+                    if (profilePanel) {
+                        profilePanel.dispose();
+                    }
+                    vscode.commands.executeCommand('perfProfiles.start');
+                    return;
             }
         },
         undefined,
@@ -544,8 +563,6 @@ function _slicing(context: vscode.ExtensionContext) {
                 continue;
             }
 
-            console.log('TODO check which is the source and the target to not highligh those');
-
             const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
             ranges.push(line.range);
         }
@@ -594,8 +611,7 @@ function getSlicingContent() {
         selectedTarget = selectedTarget.concat('<label for="target">');
         selectedTarget = selectedTarget.concat(targetClass + ":" + target);
         selectedTarget = selectedTarget.concat('</label>');
-    }
-    else {
+    } else {
         selectedTarget = selectedTarget.concat('&nbsp; Select a hotspot');
     }
     selectedTarget = selectedTarget.concat('</div>');
@@ -632,8 +648,11 @@ function getSlicingContent() {
             (function () {
                 const vscode = acquireVsCodeApi();
                 let short2Methods = new Map();
-                
+                let targetMethod = "";
+                                
                 window.addEventListener('message', event => {
+                    targetMethod = event.data.targetMethodName;
+                    
                     short2Methods.clear();
                     if(!event.data.connections.hasOwnProperty('key') || event.data.connections.key.length === 0) {
                         d3.select("#connection-graph").graphviz()
@@ -712,6 +731,34 @@ function getSlicingContent() {
                         selectedOptions: selectOptions
                     });
                 }
+                
+                document.getElementById("global-influence-trigger").addEventListener("click", function () {   
+                    let selectOptions = [];
+                    document.getElementsByName("source-checkbox").forEach(element => {
+                        if(element.checked) {
+                            selectOptions.push(element.id);
+                        }
+                    })
+                    vscode.postMessage({
+                        command: 'globalInfluence',
+                        options: selectOptions,
+                        target: targetMethod === undefined ? "" : targetMethod
+                    });
+                });
+                
+                document.getElementById("profile-config-trigger").addEventListener("click", function () {  
+                    let selectOptions = [];
+                    document.getElementsByName("source-checkbox").forEach(element => {
+                        if(element.checked) {
+                            selectOptions.push(element.id);
+                        }
+                    })
+                    vscode.postMessage({
+                        command: 'profile',
+                        options: selectOptions,
+                        target: targetMethod === undefined ? "" : targetMethod
+                    });
+                });
             }())
         </script>
         
