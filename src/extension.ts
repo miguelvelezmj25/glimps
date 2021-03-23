@@ -346,6 +346,16 @@ function getShortSliceMethod(method: string) {
 function getSliceConnections(connections: any[], targetMethodName: string) {
     let short2Methods = new Map<string, string>();
     let sliceConnections = '';
+    sliceConnections = sliceConnections.concat('"');
+    sliceConnections = sliceConnections.concat(getShortSliceMethod(commonSources[OPTIONS_TO_ANALYZE[0]][0]));
+    sliceConnections = sliceConnections.concat('"');
+    sliceConnections = sliceConnections.concat(' [fillcolor=lawngreen style=filled] ');
+    sliceConnections = sliceConnections.concat('"');
+    targetMethodName = targetMethodName.substring(0, targetMethodName.indexOf("("));
+    sliceConnections = sliceConnections.concat(getShortSliceMethod(targetMethodName));
+    sliceConnections = sliceConnections.concat('"');
+    sliceConnections = sliceConnections.concat(' [fillcolor=lightsalmon2 style=filled] ');
+
     connections.forEach(entry => {
         let source = entry.source;
         source = source.substring(0, source.indexOf("("));
@@ -362,16 +372,6 @@ function getSliceConnections(connections: any[], targetMethodName: string) {
         sliceConnections = sliceConnections.concat(shortTarget);
         sliceConnections = sliceConnections.concat('" ');
     });
-
-    sliceConnections = sliceConnections.concat('"');
-    sliceConnections = sliceConnections.concat(getShortSliceMethod(commonSources[OPTIONS_TO_ANALYZE[0]][0]));
-    sliceConnections = sliceConnections.concat('"');
-    sliceConnections = sliceConnections.concat(' [fillcolor=lawngreen style=filled] ');
-    sliceConnections = sliceConnections.concat('"');
-    targetMethodName = targetMethodName.substring(0, targetMethodName.indexOf("("));
-    sliceConnections = sliceConnections.concat(getShortSliceMethod(targetMethodName));
-    sliceConnections = sliceConnections.concat('"');
-    sliceConnections = sliceConnections.concat(' [fillcolor=lightsalmon2 style=filled] ');
     return {connections: sliceConnections, key: JSON.parse(JSON.stringify([...short2Methods]))};
 }
 
@@ -662,9 +662,9 @@ function getSlicingContent() {
                         short2Methods.set(entry[0], entry[1]);
                     });
                     
-                    const graphData = 'digraph { node [shape=box fillcolor=white style=filled] concentrate=true ' + event.data.connections.connections + ' }';
+                    const graphData = 'digraph { ranksep=1.0 node [shape=box fillcolor=white style=filled] concentrate=true ' + event.data.connections.connections + ' }';
                     d3.select("#connection-graph").graphviz()
-                        .renderDot(graphData).zoom(false)
+                        .renderDot(graphData)
                         .on("end", interactive);
                 });
                                                                 
