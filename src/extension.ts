@@ -1131,23 +1131,18 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 window.addEventListener('message', event => {
                     table.hideColumn("hotspot");
                     table.hideColumn("methodLong");
-                    table.deleteColumn("config1");
-                    if(table.getColumns().length === 4) {
-                        table.deleteColumn("config2");
-                    }
+                    table.hideColumn("config1");
+                    table.hideColumn("config2");
                     
                     const configToSelect = document.getElementById("configSelect").value;
                     const compareSelect = document.getElementById("compareSelect").value
                     
-                    table.addColumn({title:configToSelect, field:"config1"});
-                    table.addColumn({title:compareSelect, field:"config2"});
-                    if(configToSelect === compareSelect) {
-                        table.deleteColumn("config2");
-                    }
+                    table.addColumn({title:configToSelect, field:"config1", sorter: "number", hozAlign: "right"});
+                    table.addColumn({title:compareSelect, field:"config2", sorter: "number", hozAlign: "right"});
                     
                     const resp = event.data.response;
                     table.setData(resp);
-                    
+                                        
                     table.getRows().forEach(row => {
                         if(methodToProfile.length > 0 && row.getData().methodLong.startsWith(methodToProfile)) {
                             row.select();
@@ -1305,7 +1300,7 @@ function getNames2PerfModels(names2ConfigsRaw: any, perfModel: string) {
                 entry.options.forEach((option: any) => {
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(option.option);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" [");
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) :  (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) : (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
                     // NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.to : option.from);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" --> ");
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from) : (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to));
@@ -1361,7 +1356,7 @@ function getNames2LocalModels(names2ConfigsRaw: any, methods2ModelsRaw: any) {
                     entry.options.forEach((option: any) => {
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(option.option);
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(" [");
-                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) :  (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) : (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(" --> ");
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from) : (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to));
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('],');
