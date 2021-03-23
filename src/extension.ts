@@ -1304,11 +1304,13 @@ function getNames2PerfModels(names2ConfigsRaw: any, perfModel: string) {
                 NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('{ option : "');
                 entry.options.forEach((option: any) => {
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(option.option);
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" (");
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.to : option.from);
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" [");
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) :  (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
+                    // NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.to : option.from);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" --> ");
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.from : option.to);
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('),');
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from) : (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to));
+                    // NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.from : option.to);
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('],');
                 });
                 NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('", influence: "');
                 NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (entry.sign === '+') ? '-' : '+' : entry.sign);
@@ -1358,11 +1360,11 @@ function getNames2LocalModels(names2ConfigsRaw: any, methods2ModelsRaw: any) {
                     NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('{ option : "');
                     entry.options.forEach((option: any) => {
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(option.option);
-                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(" (");
-                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? option.to : option.from);
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(" [");
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) :  (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(" --> ");
-                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? option.from : option.to);
-                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('),');
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from) : (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to));
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('],');
                     });
                     NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('", influence: "');
                     NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (entry.sign === '+') ? '-' : '+' : entry.sign);
