@@ -1096,13 +1096,14 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     method = method.substring(0, method.indexOf("("));
                     const config = document.getElementById("configSelect").value;
                     const models = names2LocalModels[config];
+                    influencingOptionsTable.setData([]);
                     models.forEach(model => {
                         if(model.method === method) {
                             influencingOptionsTable.setData(model.model);
                         }
                     });
                     
-                    document.getElementById("local-model-method").innerHTML = "<b>Local Influencing Options for:</b> " + hotspotRow.getData().method;
+                    document.getElementById("local-model-method").innerHTML = "<b>TODO say name of any clicked row Local Influencing Options for:</b> " + hotspotRow.getData().method;
                     
                     influencingOptionsTable.getRows().forEach(row => {
                         const selectedOptions = new Set();
@@ -1191,8 +1192,8 @@ function getMethods2ModelsRaw(dataDir: string) {
     let method2Models: Method2Model[] = [];
     fs.readdirSync(path.join(dataDir, 'localModels')).forEach(file => {
         const method = path.parse(file).name;
-        const perfModel = parse(fs.readFileSync(path.join(dataDir, 'localModels', file), 'utf8'));
-        method2Models.push({method: method, model: perfModel});
+        const perfModels = require(path.join(dataDir, 'localModels', file));
+        method2Models.push({method: method, models: perfModels});
     });
     return method2Models;
 }
@@ -1300,11 +1301,9 @@ function getNames2PerfModels(names2ConfigsRaw: any, perfModel: string) {
                 entry.options.forEach((option: any) => {
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(option.option);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" [");
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) : (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
-                    // NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.to : option.from);
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.to : option.from);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" --> ");
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from) : (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to));
-                    // NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.from : option.to);
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.from : option.to);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('],');
                 });
                 NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('", influence: "');
@@ -1336,34 +1335,25 @@ function getNames2LocalModels(names2ConfigsRaw: any, methods2ModelsRaw: any) {
                 NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(localModelRaw.method);
                 NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('", model: ');
 
-                const localModel = getPerfModel(localModelRaw.model);
+                const localModel = getPerfModel(localModelRaw.models, names2ConfigsRaw[i].config);
                 const localModelEval = eval(localModel);
                 NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('[');
                 localModelEval.forEach((entry: any) => {
-                    const selections = new Map<string, any>();
-                    entry.options.forEach((option: any) => {
-                        const value = config.get(option.option);
-                        selections.set(option.option, value);
-                    });
-                    let sameValues = true;
-                    entry.options.forEach((option: any) => {
-                        const selection = selections.get(option.option);
-                        if (option.to !== selection) {
-                            sameValues = false;
-                        }
-                    });
                     NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('{ option : "');
                     entry.options.forEach((option: any) => {
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(option.option);
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(" [");
-                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to) : (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from));
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(option.from);
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(" --> ");
-                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (config.get(option.option) === option.from ? ('(' + option.from + ')') : option.from) : (config.get(option.option) === option.to ? ('(' + option.to + ')') : option.to));
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(option.to);
                         NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('],');
                     });
                     NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('", influence: "');
-                    NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(sameValues ? (entry.sign === '+') ? '-' : '+' : entry.sign);
-                    NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(entry.influence);
+                    const value = +entry.influence;
+                    if (value >= 0) {
+                        NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('+');
+                    }
+                    NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(value.toFixed(2));
                     NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat('"}, ');
                 });
                 NAMES_2_LOCAL_MODELS = NAMES_2_LOCAL_MODELS.concat(']}, ');
@@ -1394,7 +1384,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
     const configs = getConfigs(rawConfigs);
     const names2Configs = getNames2Configs(names2ConfigsRaw);
-    const perfModel = getPerfModel(rawPerfModel);
+    const perfModel = getPerfModel(rawPerfModel, "TODO");
     const names2PerfModels = getNames2PerfModels(names2ConfigsRaw, perfModel);
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
     const optionsToAnalyze = getOptionsToAnalyze();
@@ -1642,26 +1632,32 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
     </html>`;
 }
 
-function getPerfModel(rawPerfModel: string[]) {
+function getPerfModel(rawPerfModels: any, config: string) {
+    let rawPerfModel: any[] = [];
+    rawPerfModels.models.forEach((rawModel: { name: string; terms: any[]; }) => {
+        if (rawModel.name === config) {
+            rawPerfModel = rawModel.terms;
+        }
+    });
     let perfModel = "[";
     for (let i = 0; i < rawPerfModel.length; i++) {
+        const optionsRaw = rawPerfModel[i].options;
+        if (optionsRaw.length === 0) {
+            continue;
+        }
         perfModel = perfModel.concat(' { "options": [');
-        const optionsRaw = rawPerfModel[i][0];
-        const options = optionsRaw.split(",");
-        for (let j = 0; j < options.length; j++) {
+        for (let j = 0; j < optionsRaw.length; j++) {
             perfModel = perfModel.concat('{ "option": "');
-            const optionRaw = options[j];
-            perfModel = perfModel.concat(optionRaw.substring(0, optionRaw.indexOf("(")));
+            const optionRaw = optionsRaw[j];
+            perfModel = perfModel.concat(optionRaw.option);
             perfModel = perfModel.concat('", "from": "');
-            perfModel = perfModel.concat(optionRaw.substring(optionRaw.indexOf("(") + 1, optionRaw.indexOf("-")));
+            perfModel = perfModel.concat(optionRaw.from);
             perfModel = perfModel.concat('", "to": "');
-            perfModel = perfModel.concat(optionRaw.substring(optionRaw.indexOf("-") + 1, optionRaw.indexOf(")")));
+            perfModel = perfModel.concat(optionRaw.to);
             perfModel = perfModel.concat('"}, ');
         }
-        perfModel = perfModel.concat('], "sign": "');
-        perfModel = perfModel.concat(rawPerfModel[i][1]);
-        perfModel = perfModel.concat('", "influence": "');
-        perfModel = perfModel.concat(rawPerfModel[i][2]);
+        perfModel = perfModel.concat('], "influence": "');
+        perfModel = perfModel.concat(rawPerfModel[i].time);
         perfModel = perfModel.concat('" },');
     }
     return perfModel.concat("]");
@@ -1669,5 +1665,5 @@ function getPerfModel(rawPerfModel: string[]) {
 
 interface Method2Model {
     method: string
-    model: string[]
+    models: string[]
 }
