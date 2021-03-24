@@ -1132,6 +1132,9 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     
                     table.addColumn({title:configToSelect, field:"config1", sorter: "number", hozAlign: "right"});
                     table.addColumn({title:compareSelect, field:"config2", sorter: "number", hozAlign: "right"});
+                    if(configToSelect === compareSelect) {
+                        table.hideColumn("config2");
+                    }
                     
                     const resp = event.data.response;
                     table.setData(resp);
