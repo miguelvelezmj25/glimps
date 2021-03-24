@@ -989,11 +989,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                        } 
                     });
                     
-                    let hotspotRow = selectedRow;
-                    while(hotspotRow.getTreeParent() !== false) {
-                        hotspotRow = hotspotRow.getTreeParent();
-                    }
-                    let method = hotspotRow.getData().methodLong;
+                    let method = selectedRow.getData().methodLong;
                     method = method.substring(0, method.indexOf("("));
                     vscode.postMessage({
                         command: 'open-influence',
@@ -1088,11 +1084,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         return;
                     }
                     
-                    let hotspotRow = selectedRow;
-                    while(hotspotRow.getTreeParent() !== false) {
-                        hotspotRow = hotspotRow.getTreeParent();
-                    }
-                    let method = hotspotRow.getData().methodLong;
+                    let method = selectedRow.getData().methodLong;
                     method = method.substring(0, method.indexOf("("));
                     const config = document.getElementById("configSelect").value;
                     const models = names2LocalModels[config];
@@ -1103,7 +1095,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         }
                     });
                     
-                    document.getElementById("local-model-method").innerHTML = "<b>TODO say name of any clicked row Local Influencing Options for:</b> " + hotspotRow.getData().method;
+                    document.getElementById("local-model-method").innerHTML = "<b>Local Influencing Options for:</b> " + selectedRow.getData().method;
                     
                     influencingOptionsTable.getRows().forEach(row => {
                         const selectedOptions = new Set();
