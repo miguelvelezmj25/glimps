@@ -971,17 +971,23 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 document.getElementById("compareSelect").addEventListener("change", () => {
                     compareProfiles();
                 });
-                
+                                
                 const influencingOptionsTable = new Tabulator("#influencingOptions", {
                     layout: "fitColumns",
-                    rowClick: openInfluence,
                     columns: [
                         { title: "Options", field: "option", sorter: "string", formatter: formatInteractions }, 
-                        { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                        { title: "Influence (s)", field: "influence", sorter: influenceSort, hozAlign:"right" },
+                        { formatter:optionsInfluenceButton, hozAlign:"center", cellClick:openInfluence },
                     ],
                 });
                 
-                function openInfluence(e, row){
+                function optionsInfluenceButton() { 
+                    return "<button>View Options' Influence</button>";
+                }
+                
+                function openInfluence(e, cell){
+                    console.log(cell);
+                    const row = cell.getRow();
                     const options = new Set();
                     row.getData().option.split(',').forEach(optionRaw => {
                        if(optionRaw.length > 0) {
