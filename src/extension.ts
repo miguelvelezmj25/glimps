@@ -85,6 +85,7 @@ function _configDialog(context: vscode.ExtensionContext) {
             switch (message.command) {
                 case 'globalInfluence' :
                     CONFIG_TO_PROFILE = message.config;
+                    CONFIG_TO_COMPARE = message.compare;
                     if (globalModelPanel) {
                         globalModelPanel.dispose();
                     }
@@ -92,6 +93,7 @@ function _configDialog(context: vscode.ExtensionContext) {
                     return;
                 case 'profile' :
                     CONFIG_TO_PROFILE = message.config;
+                    CONFIG_TO_COMPARE = message.compare;
                     if (profilePanel) {
                         profilePanel.dispose();
                     }
@@ -136,13 +138,35 @@ function getAllConfigsRaw(dataDir: string) {
     return configs;
 }
 
-function getConfigs(rawConfigs: string[]) {
+function getConfigsProfile(rawConfigs: string[]) {
     let configs = "";
     for (const config of rawConfigs) {
         configs = configs.concat("<option value=\"");
         configs = configs.concat(config);
         configs = configs.concat('" ');
         configs = configs.concat(config === CONFIG_TO_PROFILE ? 'selected="selected"' : '');
+        configs = configs.concat(">");
+        configs = configs.concat(config);
+        configs = configs.concat("</option>");
+    }
+    return configs;
+}
+
+function getConfigsCompare(rawConfigs: string[]) {
+    let configs = "";
+    for (const config of rawConfigs) {
+        configs = configs.concat("<option value=\"");
+        configs = configs.concat(config);
+        configs = configs.concat('" ');
+        let selected = '';
+        if (CONFIG_TO_COMPARE.length === 0) {
+            if (config !== CONFIG_TO_PROFILE) {
+                selected = 'selected="selected"';
+            }
+        } else if (config === CONFIG_TO_COMPARE) {
+            selected = 'selected="selected"';
+        }
+        configs = configs.concat(selected);
         configs = configs.concat(">");
         configs = configs.concat(config);
         configs = configs.concat("</option>");
@@ -172,7 +196,7 @@ function getNames2Configs(names2ConfigsRaw: any) {
 }
 
 function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
-    const configs = getConfigs(rawConfigs);
+    const configs = getConfigsProfile(rawConfigs);
     const names2Configs = getNames2Configs(names2ConfigsRaw);
 
     let optionsValues = '{';
@@ -275,14 +299,16 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 document.getElementById("global-influence-trigger").addEventListener("click", function () {    
                     vscode.postMessage({
                         command: 'globalInfluence',
-                        config: document.getElementById("configSelect").value
+                        config: document.getElementById("configSelect").value,
+                        compare: document.getElementById("compareSelect").value
                     });
                 });
                 
                 document.getElementById("profile-config-trigger").addEventListener("click", function () {    
                     vscode.postMessage({
                         command: 'profile',
-                        config: document.getElementById("configSelect").value
+                        config: document.getElementById("configSelect").value,
+                        compare: document.getElementById("compareSelect").value
                     });
                 });
             }())
@@ -816,6 +842,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     return;
                 case 'open-influence' :
                     CONFIG_TO_PROFILE = message.config;
+                    CONFIG_TO_COMPARE = message.compare;
                     METHOD_TO_PROFILE = message.method;
                     OPTIONS_TO_ANALYZE = message.options;
                     if (globalModelPanel) {
@@ -897,27 +924,8 @@ function openFileAndNavigate(uri: vscode.Uri, method: string) {
 }
 
 function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
-    const leftConfigs = getConfigs(rawConfigs);
-
-    let rightConfigs = "";
-    for (const config of rawConfigs) {
-        rightConfigs = rightConfigs.concat("<option value=\"");
-        rightConfigs = rightConfigs.concat(config);
-        rightConfigs = rightConfigs.concat('" ');
-        let selected = '';
-        if (CONFIG_TO_COMPARE.length === 0) {
-            if (config !== CONFIG_TO_PROFILE) {
-                selected = 'selected="selected"';
-            }
-        } else if (config === CONFIG_TO_PROFILE) {
-            selected = 'selected="selected"';
-        }
-        rightConfigs = rightConfigs.concat(selected);
-        rightConfigs = rightConfigs.concat(">");
-        rightConfigs = rightConfigs.concat(config);
-        rightConfigs = rightConfigs.concat("</option>");
-    }
-
+    const leftConfigs = getConfigsProfile(rawConfigs);
+    const rightConfigs = getConfigsCompare(rawConfigs);
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
     const methodToProfile = getMethodToProfile();
     const optionsToAnalyze = getOptionsToAnalyze();
@@ -986,7 +994,6 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                 
                 function openInfluence(e, cell){
-                    console.log(cell);
                     const row = cell.getRow();
                     const options = new Set();
                     row.getData().option.split(',').forEach(optionRaw => {
@@ -1000,6 +1007,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     vscode.postMessage({
                         command: 'open-influence',
                         config: document.getElementById("configSelect").value,
+                        compare: document.getElementById("compareSelect").value,
                         options: Array.from(options),
                         method: method
                     });
@@ -1243,6 +1251,7 @@ function _globalModel(context: vscode.ExtensionContext) {
                     openFileAndNavigate(uri, method);
 
                     CONFIG_TO_PROFILE = message.config;
+                    CONFIG_TO_COMPARE = message.compare;
                     METHOD_TO_PROFILE = message.method;
                     OPTIONS_TO_ANALYZE = message.options;
                     if (profilePanel) {
@@ -1390,7 +1399,8 @@ function getNames2DefaultTimes(names2PerfModelsRaw: any) {
 }
 
 function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
-    const configs = getConfigs(rawConfigs);
+    const configs = getConfigsProfile(rawConfigs);
+    const rightConfigs = getConfigsCompare(rawConfigs);
     const names2Configs = getNames2Configs(names2ConfigsRaw);
     const names2DefaultTimes = getNames2DefaultTimes(names2PerfModelsRaw);
     const names2PerfModels = getNames2PerfModels(names2PerfModelsRaw);
@@ -1414,12 +1424,12 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 ${configs}
             </select>
         </div>
-<!--        <div style="display: inline; font-size: 14px;">compare to: TODO? </div>-->
-<!--        <div style="display: inline;">-->
-<!--            <select name="compareSelect" id="compareSelect">-->
-<!--                            // {configs} -->
-<!--            </select>-->
-<!--        </div>-->
+        <div style="display: inline; font-size: 14px;">compare to: </div>
+        <div style="display: inline;">
+            <select name="compareSelect" id="compareSelect">
+                ${rightConfigs}
+            </select>
+        </div>
         <br>
         <br>
         <div id="selected-config-time" style="font-size: 14px;">Execution time:</div>
@@ -1472,6 +1482,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                         command: 'open-region',
                         method: file,
                         config: document.getElementById("configSelect").value,
+                        compare: document.getElementById("compareSelect").value,
                         options: Array.from(selectedOptions)
                     });
                 }
@@ -1566,7 +1577,39 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                                     
                 function viewPerfModel() {                    
                     const config = document.getElementById("configSelect").value;
-                    perfModelTable.setData(names2PerfModels[config]);
+                    const data = names2PerfModels[config];
+                    perfModelTable.setData(data);
+                    
+                    const compare = document.getElementById("compareSelect").value;
+                    const sameOptions = new Set();
+                    if(config !== compare) {
+                        data.forEach(row => {
+                            const rowOption = row.option;
+                            let foundConfig = false;
+                            names2PerfModels[config].forEach(entry => {
+                                if(entry.option === rowOption) {
+                                    foundConfig = true;
+                                }
+                            });
+                            let foundCompare = false;
+                            names2PerfModels[compare].forEach(entry => {
+                                if(entry.option === rowOption) {
+                                    foundCompare = true;
+                                }
+                            });
+                            if(foundConfig && foundCompare) {
+                                sameOptions.add(rowOption);
+                            }
+                        })
+                    }
+
+                    perfModelTable.getRows().forEach(row => {
+                        console.log(sameOptions);
+                        console.log(row.getData().option);
+                        if(sameOptions.has(row.getData().option)) {
+                            row.getElement().style.color = "#999999";
+                        }
+                    });
                     
                     const configSelected = names2Configs[config];
                     const configValues = new Map();
@@ -1591,6 +1634,10 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 viewPerfModel();
                     
                 document.getElementById("configSelect").addEventListener("change", () => {
+                    viewPerfModel();
+                });
+                
+                document.getElementById("compareSelect").addEventListener("change", () => {
                     viewPerfModel();
                 });
             
