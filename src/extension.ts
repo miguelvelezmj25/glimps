@@ -1102,10 +1102,52 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     method = method.substring(0, method.indexOf("("));
                     const config = document.getElementById("configSelect").value;
                     const models = names2LocalModels[config];
-                    influencingOptionsTable.setData([]);
+                    let influence = [];
                     models.forEach(model => {
                         if(model.method === method) {
-                            influencingOptionsTable.setData(model.model);
+                            influence = model.model;
+                        }
+                    });
+                    influencingOptionsTable.setData(influence);
+                    
+                    const compare = document.getElementById("compareSelect").value;
+                    const sameOptions = new Set();
+                    if(config !== compare) {
+                        influence.forEach(row => {
+                            const rowOption = row.option;
+                            let configModel = []
+                            names2LocalModels[config].forEach(model => {
+                                if(model.method === method) {
+                                    configModel = model.model;
+                                }
+                            });
+                            let foundConfig = false;
+                            configModel.forEach(entry => {
+                                if(entry.option === rowOption) {
+                                    foundConfig = true;
+                                }
+                            });
+                            let compareModel = []
+                            names2LocalModels[compare].forEach(model => {
+                                if(model.method === method) {
+                                    compareModel = model.model;
+                                }
+                            });
+                            let foundCompare = false;
+                            compareModel.forEach(entry => {
+                                if(entry.option === rowOption) {
+                                    foundCompare = true;
+                                }
+                            });
+                            if(foundConfig && foundCompare) {
+                                sameOptions.add(rowOption);
+                            }
+                        })
+                    }
+
+                    influencingOptionsTable.getRows().forEach(row => {
+                        if(sameOptions.has(row.getData().option)) {
+                            row.getElement().style.color = "#999999";
                         }
                     });
                     
@@ -1604,8 +1646,6 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     }
 
                     perfModelTable.getRows().forEach(row => {
-                        console.log(sameOptions);
-                        console.log(row.getData().option);
                         if(sameOptions.has(row.getData().option)) {
                             row.getElement().style.color = "#999999";
                         }
