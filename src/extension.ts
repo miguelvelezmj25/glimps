@@ -1450,11 +1450,15 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     columns: [
                         { title: "Influenced Hot Spot", field: "methods", sorter: "string" }, 
                         { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                        { formatter:optionsInfluenceButton, hozAlign:"center", cellClick:openFile },
                         { title: "method",  field: "method" },
                     ],
-                    rowClick:openFile,
                 });
                 localInfluenceTable.hideColumn("method");
+                 
+                function optionsInfluenceButton() { 
+                    return "<button>Profile Hot Spots</button>";
+                }
                 
                 function openFile(e, row){
                     const file = row.getData().method;
