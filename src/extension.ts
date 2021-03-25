@@ -197,6 +197,7 @@ function getNames2Configs(names2ConfigsRaw: any) {
 
 function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
     const configs = getConfigsProfile(rawConfigs);
+    const rightConfigs = getConfigsCompare(rawConfigs);
     const names2Configs = getNames2Configs(names2ConfigsRaw);
 
     let optionsValues = '{';
@@ -228,6 +229,12 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 ${configs}
             </select>
         </div>
+        <div style="display: inline; font-size: 14px;">compare to: </div>
+        <div style="display: inline;">
+            <select name="compareSelect" id="compareSelect" onchange="displayConfig()">
+                ${rightConfigs}
+            </select>
+        </div>
         <br>
         <br>
         <div id="displayConfig"></div>
@@ -256,13 +263,45 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 layout: "fitColumns",
                 columns: [
                     { title: "Option", field: "option", sorter: "string" }, 
-                    { title: "Value",  field: "value",  sorter: "string" }
+                    { title: document.getElementById("configSelect").value,  field: "config1",  sorter: "string" },
+                    { title: document.getElementById("compareSelect").value,  field: "config2",  sorter: "string" }
                 ],
             });
                         
-            function displayConfig() {                    
+            function displayConfig() {
+                configTable.hideColumn("config1");
+                configTable.hideColumn("config2");
+                
                 const config = document.getElementById("configSelect").value;
-                configTable.setData(names2Configs[config]);
+                const compare = document.getElementById("compareSelect").value;
+                configTable.addColumn({title:config, field: "config1",  sorter: "string" });
+                configTable.addColumn({title:compare, field: "config2",  sorter: "string" });
+                if(config === compare) {
+                    configTable.hideColumn("config2");
+                }
+                
+                const configValues = names2Configs[config];
+                const compareValues = names2Configs[compare];
+                
+                const values = new Map();
+                configValues.forEach(entry => {
+                    values.set(entry.option, [entry.value]);
+                });
+                compareValues.forEach(entry => {
+                    values.get(entry.option).push(entry.value);
+                });
+                
+                let data = [];
+                values.forEach((value, key) => {
+                    data.push({option: key, config1: value[0], config2: value[1]});
+                });
+                configTable.setData(data);
+                
+                configTable.getRows().forEach(row => {
+                    if(config !== compare && row.getData().config1 === row.getData().config2) {
+                        row.getElement().style.color = '#bfbfbf';
+                    }
+                });
             }
             displayConfig();
                         
@@ -300,7 +339,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                     vscode.postMessage({
                         command: 'globalInfluence',
                         config: document.getElementById("configSelect").value,
-                        compare: document.getElementById("compareSelect").value
+                        compare: document.getElementById("compareSelect").value,
                     });
                 });
                 
@@ -308,7 +347,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                     vscode.postMessage({
                         command: 'profile',
                         config: document.getElementById("configSelect").value,
-                        compare: document.getElementById("compareSelect").value
+                        compare: document.getElementById("compareSelect").value,
                     });
                 });
             }())
@@ -1147,7 +1186,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
 
                     influencingOptionsTable.getRows().forEach(row => {
                         if(sameOptions.has(row.getData().option)) {
-                            row.getElement().style.color = "#999999";
+                            row.getElement().style.color = '#bfbfbf';
                         }
                     });
                     
@@ -1647,7 +1686,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
 
                     perfModelTable.getRows().forEach(row => {
                         if(sameOptions.has(row.getData().option)) {
-                            row.getElement().style.color = "#999999";
+                            row.getElement().style.color = '#bfbfbf';
                         }
                     });
                     
