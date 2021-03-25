@@ -1218,12 +1218,11 @@ function _globalModel(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const defaultExecutionTime = fs.readFileSync(path.join(dataDir, 'default.txt'), 'utf8');
-    const perfModel = parse(fs.readFileSync(path.join(dataDir, 'perf-model.csv'), 'utf8'));
+    const names2ModelsRaw = require(path.join(dataDir, 'perf-models.json'));
     const allConfigsRaw = getAllConfigsRaw(dataDir);
     const names2ConfigsRaw = getNames2ConfigsRaw(dataDir);
     const methods2ModelsRaw = getMethods2ModelsRaw(dataDir);
-    globalModelPanel.webview.html = getGlobalModelContent(defaultExecutionTime, perfModel, allConfigsRaw, names2ConfigsRaw, methods2ModelsRaw);
+    globalModelPanel.webview.html = getGlobalModelContent(names2ModelsRaw, allConfigsRaw, names2ConfigsRaw, methods2ModelsRaw);
 
     const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
 
@@ -1272,48 +1271,37 @@ function _globalModel(context: vscode.ExtensionContext) {
     );
 }
 
-function getNames2PerfModels(names2ConfigsRaw: any, perfModel: string) {
+function getNames2PerfModels(names2PerfModelsRaw: any) {
     if (NAMES_2_PERF_MODELS.length === 0) {
-        const perfModelEval = eval(perfModel);
         NAMES_2_PERF_MODELS = '{';
-        for (let i = 0; i < names2ConfigsRaw.length; i++) {
+        names2PerfModelsRaw.models.forEach((entry: any) => {
             NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('"');
-            NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(names2ConfigsRaw[i].config);
-            NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('": ');
-            const config = new Map<string, string>();
-            for (let j = 0; j < names2ConfigsRaw[i].value.length; j++) {
-                config.set(names2ConfigsRaw[i].value[j][0], names2ConfigsRaw[i].value[j][1]);
-            }
-            NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('[');
-            perfModelEval.forEach((entry: any) => {
-                const selections = new Map<string, any>();
-                entry.options.forEach((option: any) => {
-                    const value = config.get(option.option);
-                    selections.set(option.option, value);
-                });
-                let sameValues = true;
-                entry.options.forEach((option: any) => {
-                    const selection = selections.get(option.option);
-                    if (option.to !== selection) {
-                        sameValues = false;
-                    }
-                });
+            NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(entry.name);
+            NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('": [');
+            for (let i = 0; i < entry.terms.length; i++) {
+                const optionsRaw = entry.terms[i].options;
+                if (optionsRaw.length === 0) {
+                    continue;
+                }
                 NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('{ option : "');
-                entry.options.forEach((option: any) => {
+                optionsRaw.forEach((option: any) => {
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(option.option);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" [");
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.to : option.from);
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(option.from);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(" --> ");
-                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? option.from : option.to);
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(option.to);
                     NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('],');
                 });
                 NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('", influence: "');
-                NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(sameValues ? (entry.sign === '+') ? '-' : '+' : entry.sign);
-                NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(entry.influence);
+                const value = +entry.terms[i].time;
+                if (value >= 0) {
+                    NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('+');
+                }
+                NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat(value.toFixed(2));
                 NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('"}, ');
-            });
+            }
             NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('],');
-        }
+        });
         NAMES_2_PERF_MODELS = NAMES_2_PERF_MODELS.concat('}');
     }
     return NAMES_2_PERF_MODELS;
@@ -1381,12 +1369,31 @@ function getMethodToProfile() {
     return '{ method: "' + METHOD_TO_PROFILE + '" }';
 }
 
-function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: string[], rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
-    const defaultExecutionTime = '{ time : ' + (+defaultExecutionTimeRaw.split(' ')[0]) + ' }';
+function getNames2DefaultTimes(names2PerfModelsRaw: any) {
+    let names2DefaultTimes = '{';
+    names2PerfModelsRaw.models.forEach((entry: any) => {
+        names2DefaultTimes = names2DefaultTimes.concat('"');
+        names2DefaultTimes = names2DefaultTimes.concat(entry.name);
+        names2DefaultTimes = names2DefaultTimes.concat('": ');
+        for (let i = 0; i < entry.terms.length; i++) {
+            const optionsRaw = entry.terms[i].options;
+            if (optionsRaw.length !== 0) {
+                continue;
+            }
+            names2DefaultTimes = names2DefaultTimes.concat('"');
+            const value = +entry.terms[i].time;
+            names2DefaultTimes = names2DefaultTimes.concat(value.toFixed(2));
+            names2DefaultTimes = names2DefaultTimes.concat('", ');
+        }
+    });
+    return names2DefaultTimes.concat('}');
+}
+
+function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
     const configs = getConfigs(rawConfigs);
     const names2Configs = getNames2Configs(names2ConfigsRaw);
-    const perfModel = getPerfModel(rawPerfModel, "TODO");
-    const names2PerfModels = getNames2PerfModels(names2ConfigsRaw, perfModel);
+    const names2DefaultTimes = getNames2DefaultTimes(names2PerfModelsRaw);
+    const names2PerfModels = getNames2PerfModels(names2PerfModelsRaw);
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
     const optionsToAnalyze = getOptionsToAnalyze();
     const methodToProfile = getMethodToProfile();
@@ -1430,8 +1437,7 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
         <script type="text/javascript">          
             (function () {    
                 const vscode = acquireVsCodeApi();
-                const defaultExecutionTime = ${defaultExecutionTime}.time;
-                const rawPerfModel = ${perfModel}
+                const names2DefaultTimes = ${names2DefaultTimes};
                 const names2PerfModels = ${names2PerfModels};
                 const names2LocalModels = ${names2LocalModels};
                 const names2Configs = ${names2Configs};
@@ -1563,35 +1569,9 @@ function getGlobalModelContent(defaultExecutionTimeRaw: string, rawPerfModel: st
                     for (let i = 0; i < configSelected.length; i++) {
                         configValues.set(configSelected[i].option, configSelected[i].value);
                     }
-                    
-                    let time = defaultExecutionTime;
-                    rawPerfModel.forEach(entry => {
-                        const selections = new Map();
-                        entry.options.forEach(option => {
-                            const value = configValues.get(option.option);
-                            selections.set(option.option, value);
-                        });
-    
-                        let sameValues = true;
-                        entry.options.forEach(option => {
-                            const selection = selections.get(option.option);
-                            if (option.to !== selection) {
-                                sameValues = false;
-                            }
-                        });
-                        if(sameValues) {
-                            const influence = +entry.influence;
-                            if(entry.sign === '+') {
-                                time += influence;
-                            }
-                            else {
-                                time -= influence;
-                            }
-                        }
-                    });
-                
-                    document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + Math.max(0, time).toFixed(2) + " seconds";
-                    
+
+                    document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + (+names2DefaultTimes[config]).toFixed(2) + " seconds";
+                   
                     perfModelTable.getRows().forEach(row => {
                         const selectedOptions = new Set();
                         row.getData().option.split(',').forEach(optionRaw => {
