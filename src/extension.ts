@@ -1538,6 +1538,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 
                 const localInfluenceTable = new Tabulator("#localInfluence", {
                     layout: "fitColumns",
+                    maxHeight:"450px",
                     columns: [
                         { title: "Influenced Hot Spot", field: "methods", sorter: "string" }, 
                         { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
@@ -1570,6 +1571,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                                       
                 const perfModelTable = new Tabulator("#perfModel", {
                     layout: "fitColumns",
+                    maxHeight:"450px",
                     selectable: true,
                     columns: [
                         { title: "Options", field: "option", sorter: "string", formatter: customFormatter }, 
@@ -1628,6 +1630,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                         localInfluence.push({methods: method, influence: influence, method: methodRaw});
                     });
                     localInfluenceTable.setData(localInfluence);
+                    localInfluenceTable.setSort("influence", "desc");
                     
                     localInfluenceTable.getRows().forEach(row => {
                         if(methodToProfile.length > 0 && row.getData().method.startsWith(methodToProfile)) {
@@ -1660,6 +1663,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     const config = document.getElementById("configSelect").value;
                     const data = names2PerfModels[config];
                     perfModelTable.setData(data);
+                    perfModelTable.setSort("influence", "desc");
                     
                     const compare = document.getElementById("compareSelect").value;
                     const sameOptions = new Set();
