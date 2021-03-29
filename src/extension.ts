@@ -996,7 +996,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <div id="hotspot-diff-table"></div>
         <br>
         <br>
-        <div id="local-model-method" style="font-size: 14px;"><b>Local Influencing Options for:</b></div>
+        <div id="local-model-method" style="font-size: 14px;"><b>Local Influencing Options</b></div>
         <br>
         <div id="influencingOptions"></div>
         <br>
@@ -1021,6 +1021,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                                 
                 const influencingOptionsTable = new Tabulator("#influencingOptions", {
                     layout: "fitColumns",
+                    maxHeight:"450px",
                     columns: [
                         { title: "Options", field: "option", sorter: "string", formatter: formatInteractions }, 
                         { title: "Influence (s)", field: "influence", sorter: influenceSort, hozAlign:"right" },
@@ -1073,7 +1074,9 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                                                
                 const table = new Tabulator("#hotspot-diff-table", {
-                    layout:"fitData",
+                    // layout:"fitData",
+                    layout:"fitColumns",
+                    maxHeight:"450px",
                     dataTree:true,
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
@@ -1148,6 +1151,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         }
                     });
                     influencingOptionsTable.setData(influence);
+                    influencingOptionsTable.setSort("influence", "desc");
                     
                     const compare = document.getElementById("compareSelect").value;
                     const sameOptions = new Set();
@@ -1190,8 +1194,6 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         }
                     });
                     
-                    document.getElementById("local-model-method").innerHTML = "<b>Local Influencing Options for:</b> " + selectedRow.getData().method;
-                    
                     influencingOptionsTable.getRows().forEach(row => {
                         const selectedOptions = new Set();
                         row.getData().option.split(',').forEach(optionRaw => {
@@ -1233,6 +1235,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     
                     const resp = event.data.response;
                     table.setData(resp);
+                    table.setSort("config1", "desc");
                                         
                     table.getRows().forEach(row => {
                         if(methodToProfile.length > 0 && row.getData().methodLong.startsWith(methodToProfile)) {
