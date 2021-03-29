@@ -397,6 +397,14 @@ function _sliceTarget(context: vscode.ExtensionContext) {
     targetClass = sliceData.filePath;
     target = sliceData.line;
 
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const methods2Lines = getMethods2Lines(dataDir);
+    methods2Lines.forEach((value, key) => {
+        if ((targetClass + ':' + target) === value) {
+            METHOD_TO_PROFILE = key;
+        }
+    });
+
     if (slicingPanel) {
         slicingPanel.dispose();
     }
@@ -479,6 +487,30 @@ function getSliceSourcesRaw(dataDir: string) {
     return sources;
 }
 
+function getMethods2Options(methods2ModelsRaw: any[]) {
+    const methods2Options = new Map<string, string[]>();
+    methods2ModelsRaw.forEach(entry => {
+        const uniqueOptions = new Set<string>();
+        entry.models.models.forEach((term: any) => {
+            term.terms.forEach((options: any) => {
+                options.options.forEach((option: any) => {
+                    uniqueOptions.add(option.option);
+                });
+            });
+        });
+        methods2Options.set(entry.method, Array.from(uniqueOptions));
+    });
+    return methods2Options;
+}
+
+function getMethods2Lines(dataDir: string) {
+    let methods2Lines = new Map<string, string>();
+    parse(fs.readFileSync(path.join(dataDir, 'tracing', 'targetMethods.csv'), 'utf8')).forEach((entry: string[]) => {
+        methods2Lines.set(entry[0], entry[1]);
+    });
+    return methods2Lines;
+}
+
 function _slicing(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
@@ -498,8 +530,11 @@ function _slicing(context: vscode.ExtensionContext) {
     );
 
     const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
+    const methods2ModelsRaw = getMethods2ModelsRaw(dataDir);
+    const methods2Options = getMethods2Options(methods2ModelsRaw);
+    const methods2Lines = getMethods2Lines(dataDir);
     commonSources = getSliceSourcesRaw(dataDir);
-    slicingPanel.webview.html = getSlicingContent();
+    slicingPanel.webview.html = getSlicingContent(methods2Options, methods2Lines);
 
     const sliceInfoRaw = getSliceInfoRaw(dataDir);
     const port = sliceInfoRaw.port;
@@ -518,9 +553,16 @@ function _slicing(context: vscode.ExtensionContext) {
                 }
                 case 'slice': {
                     OPTIONS_TO_ANALYZE = message.selectedOptions;
-                    if (message.target) {
+                    if (!message.target) {
                         targetClass = "";
                         target = -1;
+                        METHOD_TO_PROFILE = '';
+                    } else {
+                        methods2Lines.forEach((value, key) => {
+                            if ((targetClass + ':' + target) === value) {
+                                METHOD_TO_PROFILE = key;
+                            }
+                        });
                     }
 
                     if (!slicingPanel) {
@@ -647,7 +689,7 @@ function getSliceInfoRaw(dataDir: string) {
     return {programName: sliceInfo[0], port: sliceInfo[1]};
 }
 
-function getSlicingContent() {
+function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: Map<string, string>) {
     const optionsToAnalyze = new Set(OPTIONS_TO_ANALYZE);
     let commonSourcesSelect = '';
     Object.entries(commonSources).forEach(entry => {
@@ -668,12 +710,18 @@ function getSlicingContent() {
     });
 
     let selectedTarget = '<div id="selectedTarget">';
-    if (target > 0) {
+    if (METHOD_TO_PROFILE.length !== 0) {
         selectedTarget = selectedTarget.concat('&nbsp; <input type="checkbox" id="target-checkbox" name="target-checkbox" ');
         selectedTarget = selectedTarget.concat(' checked>\n');
         selectedTarget = selectedTarget.concat('<label for="target">');
-        selectedTarget = selectedTarget.concat(targetClass + ":" + target);
+        selectedTarget = selectedTarget.concat(METHOD_TO_PROFILE);
         selectedTarget = selectedTarget.concat('</label>');
+
+        const data = methods2Lines.get(METHOD_TO_PROFILE)?.split(":");
+        if (data) {
+            targetClass = data[0];
+            target = Number(data[1]);
+        }
     } else {
         selectedTarget = selectedTarget.concat('&nbsp; Select a hotspot');
     }
@@ -694,7 +742,7 @@ function getSlicingContent() {
         <br>
         ${commonSourcesSelect}
         <br>
-        <div style="font-size: 14px;"><b>Hotspot:</b></div>
+        <div style="font-size: 14px;"><b>Select Hotspot:</b></div>
         <br>
         ${selectedTarget}
         <br>
@@ -762,13 +810,30 @@ function getSlicingContent() {
                         })
                         vscode.postMessage({
                             command: 'slice',
-                            selectedOptions: selectOptions
+                            selectedOptions: selectOptions,
+                            target: true
                         });
                     });
                 });
                 
-                document.getElementById("target-checkbox").addEventListener("change", function () {
-                    document.getElementById("selectedTarget").innerHTML = '&nbsp; Select a hotspot';
+                if (document.getElementById("target-checkbox")) {
+                    document.getElementById("target-checkbox").addEventListener("change", function () {
+                        document.getElementById("selectedTarget").innerHTML = '&nbsp; Select a hotspot';
+                        let selectOptions = [];
+                        document.getElementsByName("source-checkbox").forEach(element => {
+                            if(element.checked) {
+                                selectOptions.push(element.id);
+                            }
+                        })
+                        vscode.postMessage({
+                            command: 'slice',
+                            selectedOptions: selectOptions,
+                            target: false
+                        });
+                    });
+                }
+                
+                if(document.getElementById("hotspot") !== undefined) {
                     let selectOptions = [];
                     document.getElementsByName("source-checkbox").forEach(element => {
                         if(element.checked) {
@@ -780,22 +845,9 @@ function getSlicingContent() {
                         selectedOptions: selectOptions,
                         target: true
                     });
-                });
-                
-                if(document.getElementById("hotspot") !== undefined) {
-                    let selectOptions = [];
-                    document.getElementsByName("source-checkbox").forEach(element => {
-                        if(element.checked) {
-                            selectOptions.push(element.id);
-                        }
-                    })
-                    vscode.postMessage({
-                        command: 'slice',
-                        selectedOptions: selectOptions
-                    });
                 }
                 
-                document.getElementById("global-influence-trigger").addEventListener("click", function () {   
+                document.getElementById("global-influence-trigger").addEventListener("click", function () { 
                     let selectOptions = [];
                     document.getElementsByName("source-checkbox").forEach(element => {
                         if(element.checked) {
@@ -906,6 +958,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                     return;
                 case 'trace' :
                     OPTIONS_TO_ANALYZE = message.options;
+                    METHOD_TO_PROFILE = message.method;
                     if (slicingPanel) {
                         slicingPanel.dispose();
                     }
@@ -1274,9 +1327,18 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         }
                     });
                     
+                    let method = '';
+                    table.getRows().forEach(row => {
+                        if(row.isSelected()) {
+                            method = row.getData().methodLong;
+                            method = method.substring(0, method.indexOf('('));
+                        }
+                    });
+                    
                     vscode.postMessage({
                         command: 'trace',
-                        options: Array.from(selectedOptions)
+                        options: Array.from(selectedOptions),
+                        method: method
                     });
                 });
             }())
