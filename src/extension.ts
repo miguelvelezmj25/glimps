@@ -1002,7 +1002,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <br>
 <!--        <hr>-->
         <br>
-        <div style="display: inline;"><button id="trace-trigger">Trace Options</button></div>
+        <div style="display: inline;"><button id="trace-trigger">Trace Options to Hotspots</button></div>
         <script type="text/javascript">                  
             (function () {
                 const vscode = acquireVsCodeApi();
@@ -1128,6 +1128,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 function showInfluence(data, rows) {
                     if(rows.length === 0) {
                         influencingOptionsTable.setData([]);
+                        document.getElementById("trace-trigger").innerHTML = traceButtonText([], '');
                         return;
                     }
                     if(rows.length === 1) {
@@ -1187,6 +1188,9 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                             }
                         })
                     }
+                    
+                    method = method.substring(method.lastIndexOf(".") + 1);
+                    document.getElementById("trace-trigger").innerHTML = traceButtonText([], method);
 
                     influencingOptionsTable.getRows().forEach(row => {
                         if(sameOptions.has(row.getData().option)) {
@@ -1203,8 +1207,22 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         }); 
                         if(optionsToAnalyze.sort().join(',') === Array.from(selectedOptions).sort().join(',')) {
                             row.select();
+                            document.getElementById("trace-trigger").innerHTML = traceButtonText(optionsToAnalyze, method);
                         }
                     });
+                }
+                
+                function traceButtonText(options, method) { 
+                    if(options.length === 0 && method === '') {
+                        return "Trace Options to Hotspots";
+                    }
+                    if(options.length === 0) {
+                        return 'Trace Options to ' + method + '(...)';
+                    }
+                    if(method === '') {
+                        return 'Trace ' + options + ' to Hotspots';
+                    }
+                   return 'Trace ' + options + ' to ' + method + '(...)';
                 }
                 
                 function compareProfiles() {
@@ -1527,7 +1545,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
         <br>
 <!--        <hr>-->
         <br>
-        <div style="display: inline;"><button id="trace-trigger">Trace Options</button></div>
+        <div style="display: inline;"><button id="trace-trigger">Trace Options to Hotspots</button></div>
         <script type="text/javascript">          
             (function () {    
                 const vscode = acquireVsCodeApi();
@@ -1586,6 +1604,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 function selectInfluence(data, rows) {
                     if(rows.length === 0) {
                         localInfluenceTable.setData([]);
+                        document.getElementById("trace-trigger").innerHTML = traceButtonText([], '');                
                         return;
                     }
                     
@@ -1606,6 +1625,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                         }
                     });
                     selectedOptions = Array.from(selectedOptions);
+                    document.getElementById("trace-trigger").innerHTML = traceButtonText(selectedOptions, '');
                     
                     const influencedMethods = new Map();
                     const config = document.getElementById("configSelect").value;
@@ -1624,7 +1644,6 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                             }
                         });
                     });
-                    
                                     
                     const localInfluence = [];
                     influencedMethods.forEach((influence, methodRaw) => {
@@ -1635,11 +1654,26 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     localInfluenceTable.setData(localInfluence);
                     localInfluenceTable.setSort("influence", "desc");
                     
+                    let method = methodToProfile.substring(methodToProfile.lastIndexOf(".") + 1);
                     localInfluenceTable.getRows().forEach(row => {
                         if(methodToProfile.length > 0 && row.getData().method.startsWith(methodToProfile)) {
                             row.select();
+                            document.getElementById("trace-trigger").innerHTML = traceButtonText(selectedOptions, method);
                         }
                     });
+                }
+                
+                function traceButtonText(options, method) { 
+                    if(options.length === 0 && method === '') {
+                        return "Trace Options to Hotspots";
+                    }
+                    if(options.length === 0) {
+                        return 'Trace Options to ' + method + '(...)';
+                    }
+                    if(method === '') {
+                        return 'Trace ' + options + ' to Hotspots';
+                    }
+                   return 'Trace ' + options + ' to ' + method + '(...)';
                 }
                 
                 function influenceSort(a, b) {
