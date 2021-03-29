@@ -751,7 +751,7 @@ function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: 
         <script src="https://d3js.org/d3.v5.min.js"></script>
         <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
         <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
-        <div style="font-size: 14px;"><b>Select Options to Trace:</b></div>
+        <div style="font-size: 14px;"><b>Select Influencing Options to Trace:</b></div>
         <br>
         ${commonSourcesSelect}
         <br>
@@ -1255,7 +1255,8 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         })
                     }
                     
-                    method = method.substring(method.lastIndexOf(".") + 1);
+                    const methodEntries = method.split('.');
+                    method = methodEntries[methodEntries.length - 2] + '.' + methodEntries[methodEntries.length - 1];
                     document.getElementById("trace-trigger").innerHTML = traceButtonText([], method);
 
                     influencingOptionsTable.getRows().forEach(row => {
@@ -1729,7 +1730,8 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     localInfluenceTable.setData(localInfluence);
                     localInfluenceTable.setSort("influence", "desc");
                     
-                    let method = methodToProfile.substring(methodToProfile.lastIndexOf(".") + 1);
+                    const methodEntries = methodToProfile.split('.');
+                    const method = methodEntries[methodEntries.length - 2] + '.' + methodEntries[methodEntries.length - 1];
                     localInfluenceTable.getRows().forEach(row => {
                         if(methodToProfile.length > 0 && row.getData().method.startsWith(methodToProfile)) {
                             row.select();
