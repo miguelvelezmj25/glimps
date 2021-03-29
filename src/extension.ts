@@ -691,8 +691,21 @@ function getSliceInfoRaw(dataDir: string) {
 
 function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: Map<string, string>) {
     const optionsToAnalyze = new Set(OPTIONS_TO_ANALYZE);
+
+    let sourcesToShow: { [p: string]: string[] } = {};
+    if (METHOD_TO_PROFILE.length !== 0) {
+        const influencingOptions = uniqueOptions.get(METHOD_TO_PROFILE);
+        Object.entries(commonSources).forEach((entry: any) => {
+            if (influencingOptions?.includes(entry[0])) {
+                sourcesToShow[entry[0]] = [entry[1][0], entry[1][1], entry[1][2]];
+            }
+        });
+    } else {
+        sourcesToShow = commonSources;
+    }
+
     let commonSourcesSelect = '';
-    Object.entries(commonSources).forEach(entry => {
+    Object.entries(sourcesToShow).forEach(entry => {
         commonSourcesSelect = commonSourcesSelect.concat('<div>\n');
         commonSourcesSelect = commonSourcesSelect.concat('&nbsp; <input type="checkbox" id="');
         commonSourcesSelect = commonSourcesSelect.concat(entry[0]);
