@@ -904,7 +904,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     // Create and show a new webview
     profilePanel = vscode.window.createWebviewPanel(
         'perfProfiles', // Identifies the type of the webview. Used internally
-        'Hotspot View', // Title of the panel displayed to the user
+        'Hot Spots', // Title of the panel displayed to the user
         vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
         {
             enableScripts: true,
@@ -1649,8 +1649,13 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     return "<button>View Hot Spots</button>";
                 }
                 
-                function openFile(e, row){
-                    const file = row.getData().method;
+                function openFile(e, cell){
+                    localInfluenceTable.getRows().forEach(row => {
+                        row.deselect();    
+                    });
+                    cell.getRow().select();
+                    
+                    const file = cell.getRow().getData().method;
                     const selectedOptions = new Set();
                     selectedRow.getData().option.split(',').forEach(optionRaw => {
                         if(optionRaw.length > 0) {
