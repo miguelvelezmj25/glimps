@@ -197,7 +197,6 @@ function getNames2Configs(names2ConfigsRaw: any) {
 
 function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
     const configs = getConfigsProfile(rawConfigs);
-    const rightConfigs = getConfigsCompare(rawConfigs);
     const names2Configs = getNames2Configs(names2ConfigsRaw);
 
     let optionsValues = '{';
@@ -232,7 +231,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <div style="display: inline; font-size: 14px;">compare to: </div>
         <div style="display: inline;">
             <select name="compareSelect" id="compareSelect" onchange="displayConfig()">
-                ${rightConfigs}
+                ${configs}
             </select>
         </div>
         <br>
