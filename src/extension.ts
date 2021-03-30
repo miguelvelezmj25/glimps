@@ -1814,7 +1814,14 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                         configValues.set(configSelected[i].option, configSelected[i].value);
                     }
 
-                    document.getElementById("selected-config-time").innerHTML = "<b>Execution time:</b> " + (+names2DefaultTimes[config]).toFixed(2) + " seconds";
+                    let times = "<b>Execution time:</b> " + (+names2DefaultTimes[config]).toFixed(2);
+                    if(config === compare) {
+                        times = times.concat(" seconds");
+                    }
+                    else {
+                        times = times.concat(" seconds vs. " + (+names2DefaultTimes[compare]).toFixed(2) + " seconds");
+                    }
+                    document.getElementById("selected-config-time").innerHTML = times;
                    
                     perfModelTable.getRows().forEach(row => {
                         const selectedOptions = new Set();
