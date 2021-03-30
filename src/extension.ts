@@ -1100,6 +1100,11 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                 
                 function openInfluence(e, cell){
+                    influencingOptionsTable.getRows().forEach(row => {
+                        row.deselect();    
+                    });
+                    cell.getRow().select();
+                    
                     const row = cell.getRow();
                     const options = new Set();
                     row.getData().option.split(',').forEach(optionRaw => {
@@ -1221,49 +1226,40 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     influencingOptionsTable.setSort("influence", "desc");
                     
                     const compare = document.getElementById("compareSelect").value;
-                    const sameOptions = new Set();
+                    names2LocalModels[compare].forEach(model => {
+                        if(model.method === method) {
+                            influence = model.model;
+                        }
+                    });
                     if(config !== compare) {
-                        influence.forEach(row => {
-                            const rowOption = row.option;
-                            let configModel = []
-                            names2LocalModels[config].forEach(model => {
-                                if(model.method === method) {
-                                    configModel = model.model;
+                        influencingOptionsTable.getRows().forEach(row => {
+                            let inversedSelection = '';
+                            row.getData().option.split(',').forEach(option => {
+                                if(option.length > 0) {
+                                    const optionEntries = option.split(' ');
+                                    let to = optionEntries[3];
+                                    to = to.substring(0, to.length-1)
+                                    let from = optionEntries[1];
+                                    from = from.substring(1);
+                                    inversedSelection = inversedSelection.concat(optionEntries[0] + ' [' + to + ' --> ' + from + '],');
                                 }
                             });
-                            let foundConfig = false;
-                            configModel.forEach(entry => {
-                                if(entry.option === rowOption) {
-                                    foundConfig = true;
+                            
+                            let foundTerm = false;
+                            influence.forEach(term => {
+                                if(inversedSelection === term.option) {
+                                    foundTerm = true
                                 }
                             });
-                            let compareModel = []
-                            names2LocalModels[compare].forEach(model => {
-                                if(model.method === method) {
-                                    compareModel = model.model;
-                                }
-                            });
-                            let foundCompare = false;
-                            compareModel.forEach(entry => {
-                                if(entry.option === rowOption) {
-                                    foundCompare = true;
-                                }
-                            });
-                            if(foundConfig && foundCompare) {
-                                sameOptions.add(rowOption);
+                            if(!foundTerm) {
+                                row.getElement().style.color = '#bfbfbf';
                             }
-                        })
+                        });
                     }
                     
                     const methodEntries = method.split('.');
                     method = methodEntries[methodEntries.length - 2] + '.' + methodEntries[methodEntries.length - 1];
                     document.getElementById("trace-trigger").innerHTML = traceButtonText([], method);
-
-                    influencingOptionsTable.getRows().forEach(row => {
-                        if(sameOptions.has(row.getData().option)) {
-                            row.getElement().style.color = '#bfbfbf';
-                        }
-                    });
                     
                     influencingOptionsTable.getRows().forEach(row => {
                         const selectedOptions = new Set();
@@ -1784,34 +1780,31 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     perfModelTable.setData(data);
                     perfModelTable.setSort("influence", "desc");
                     
-                    const compare = document.getElementById("compareSelect").value;
-                    const sameOptions = new Set();
+                    const compare = document.getElementById("compareSelect").value;    
                     if(config !== compare) {
-                        data.forEach(row => {
-                            const rowOption = row.option;
-                            let foundConfig = false;
-                            names2PerfModels[config].forEach(entry => {
-                                if(entry.option === rowOption) {
-                                    foundConfig = true;
+                        perfModelTable.getRows().forEach(row => {
+                            let inversedSelection = '';
+                            row.getData().option.split(',').forEach(option => {
+                                if(option.length > 0) {
+                                    const optionEntries = option.split(' ');
+                                    let to = optionEntries[3];
+                                    to = to.substring(0, to.length-1)
+                                    let from = optionEntries[1];
+                                    from = from.substring(1);
+                                    inversedSelection = inversedSelection.concat(optionEntries[0] + ' [' + to + ' --> ' + from + '],');
                                 }
                             });
-                            let foundCompare = false;
-                            names2PerfModels[compare].forEach(entry => {
-                                if(entry.option === rowOption) {
-                                    foundCompare = true;
+                            let foundTerm = false;
+                            names2PerfModels[compare].forEach(term => {
+                                if(inversedSelection === term.option) {
+                                    foundTerm = true
                                 }
                             });
-                            if(foundConfig && foundCompare) {
-                                sameOptions.add(rowOption);
+                            if(!foundTerm) {
+                                row.getElement().style.color = '#bfbfbf';
                             }
-                        })
+                        });
                     }
-
-                    perfModelTable.getRows().forEach(row => {
-                        if(sameOptions.has(row.getData().option)) {
-                            row.getElement().style.color = '#bfbfbf';
-                        }
-                    });
                     
                     const configSelected = names2Configs[config];
                     const configValues = new Map();
