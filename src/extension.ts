@@ -467,10 +467,10 @@ function getSliceSourcesRaw(dataDir: string) {
     parse(fs.readFileSync(path.join(dataDir, 'tracing', 'sources.csv'), 'utf8')).forEach((entry: string[]) => {
         const methodEntries = entry[0].split('.');
         let shortMethod = '';
-        for (let i = 0; i < (methodEntries.length - 2); i++) {
-            shortMethod = shortMethod.concat(methodEntries[i][0]);
-            shortMethod = shortMethod.concat(".");
-        }
+        // for (let i = 0; i < (methodEntries.length - 2); i++) {
+        //     shortMethod = shortMethod.concat(methodEntries[i][0]);
+        //     shortMethod = shortMethod.concat(".");
+        // }
         shortMethod = shortMethod.concat(methodEntries[methodEntries.length - 2]);
         shortMethod = shortMethod.concat('.');
         shortMethod = shortMethod.concat(methodEntries[methodEntries.length - 1]);
@@ -717,7 +717,7 @@ function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: 
         commonSourcesSelect = commonSourcesSelect.concat('<label for="');
         commonSourcesSelect = commonSourcesSelect.concat(entry[0]);
         commonSourcesSelect = commonSourcesSelect.concat('">');
-        commonSourcesSelect = commonSourcesSelect.concat(entry[0] + ' - ' + entry[1][0] + '():' + entry[1][1]);
+        commonSourcesSelect = commonSourcesSelect.concat(entry[0] + ' - ' + entry[1][0] + '(...):' + entry[1][1]);
         commonSourcesSelect = commonSourcesSelect.concat('</label>\n');
         commonSourcesSelect = commonSourcesSelect.concat('</div>\n');
     });
@@ -727,7 +727,8 @@ function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: 
         selectedTarget = selectedTarget.concat('&nbsp; <input type="checkbox" id="target-checkbox" name="target-checkbox" ');
         selectedTarget = selectedTarget.concat(' checked>\n');
         selectedTarget = selectedTarget.concat('<label for="target">');
-        selectedTarget = selectedTarget.concat(METHOD_TO_PROFILE);
+        const entries = METHOD_TO_PROFILE.split('.');
+        selectedTarget = selectedTarget.concat(entries[entries.length - 2] + '.' + entries[entries.length - 1] + '(...)');
         selectedTarget = selectedTarget.concat('</label>');
 
         const data = methods2Lines.get(METHOD_TO_PROFILE)?.split(":");
@@ -1646,7 +1647,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 localInfluenceTable.hideColumn("method");
                  
                 function optionsInfluenceButton() { 
-                    return "<button>Profile Hot Spots</button>";
+                    return "<button>View Hot Spots</button>";
                 }
                 
                 function openFile(e, row){
