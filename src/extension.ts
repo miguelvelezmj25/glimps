@@ -1671,12 +1671,15 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     layout: "fitColumns",
                     maxHeight:"450px",
                     selectable: true,
+                    groupBy:"change",
                     columns: [
                         { title: "Options", field: "option", sorter: "string", formatter: customFormatter }, 
                         { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
+                        { title: "Change",  field: "change" },
                     ],
                     rowSelectionChanged:selectInfluence
                 });
+                perfModelTable.hideColumn('change');
                 
                 function selectInfluence(data, rows) {
                     if(rows.length === 0) {
@@ -1779,29 +1782,55 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     const data = names2PerfModels[config];
                     perfModelTable.setData(data);
                     perfModelTable.setSort("influence", "desc");
-                    
+                                        
                     const compare = document.getElementById("compareSelect").value;    
-                    if(config !== compare) {
+                    if(config !== compare) {                        
                         perfModelTable.getRows().forEach(row => {
-                            let inversedSelection = '';
+                            let newData = '';
                             row.getData().option.split(',').forEach(option => {
                                 if(option.length > 0) {
+                                    let inversedSelection = '';
                                     const optionEntries = option.split(' ');
                                     let to = optionEntries[3];
                                     to = to.substring(0, to.length-1)
                                     let from = optionEntries[1];
                                     from = from.substring(1);
                                     inversedSelection = inversedSelection.concat(optionEntries[0] + ' [' + to + ' --> ' + from + '],');
+                                    let foundTerm = false;
+                                    names2PerfModels[compare].forEach(term => {
+                                        if(inversedSelection === term.option) {
+                                            foundTerm = true;
+                                        }
+                                    });
+                                    if(foundTerm) {
+                                        newData = newData.concat(option.replace('-->','➤'));
+                                    }
+                                    else {
+                                        newData = newData.concat(option);
+                                    }
+                                    newData = newData.concat(',');
                                 }
                             });
-                            let foundTerm = false;
-                            names2PerfModels[compare].forEach(term => {
-                                if(inversedSelection === term.option) {
-                                    foundTerm = true
+                            perfModelTable.addRow({option:newData, influence: row.getData().influence});
+                            row.delete();
+                        });
+                        
+                        perfModelTable.getRows().forEach(row => {
+                            let wasActuallyChanged = true;
+                            row.getData().option.split(',').forEach(option => {
+                                if(option.length > 0) {
+                                    const optionEntries = option.split(' ');
+                                    if(optionEntries[2] === '-->') {
+                                        wasActuallyChanged = false;
+                                    }
                                 }
                             });
-                            if(!foundTerm) {
-                                row.getElement().style.color = '#bfbfbf';
+                            if(wasActuallyChanged) {
+                                // row.getElement().style.color = '#07ce00';
+                                row.update({change: 'Actual Influencing Options Changes'});
+                            }
+                            else {
+                                row.update({change: 'Further Possible Changes'});
                             }
                         });
                     }
@@ -1832,6 +1861,12 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                             row.select();
                         }
                     });
+                    
+                    perfModelTable.setSort("influence", "asc");
+                    perfModelTable.setSort(
+                         {column:"change", dir:"des"},
+                         {column:"influence", dir:"des"},
+                    );
                 }
                 viewPerfModel();
                     
