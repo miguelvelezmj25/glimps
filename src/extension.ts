@@ -1088,12 +1088,18 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 const influencingOptionsTable = new Tabulator("#influencingOptions", {
                     layout: "fitColumns",
                     maxHeight:"450px",
+                    groupBy:"change",
+                    groupStartOpen:function(value){
+                        return value === 'Actual Influencing Options Changes';
+                    },
                     columns: [
                         { title: "Options", field: "option", sorter: "string", formatter: formatInteractions }, 
                         { title: "Influence (s)", field: "influence", sorter: influenceSort, hozAlign:"right" },
                         { formatter:optionsInfluenceButton, hozAlign:"center", cellClick:openInfluence },
+                        { title: "Change",  field: "change" },
                     ],
                 });
+                influencingOptionsTable.hideColumn('change');            
                 
                 function optionsInfluenceButton() { 
                     return "<button>View Options' Influence</button>";
@@ -1233,28 +1239,60 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     });
                     if(config !== compare) {
                         influencingOptionsTable.getRows().forEach(row => {
-                            let inversedSelection = '';
+                            let newData = '';
                             row.getData().option.split(',').forEach(option => {
                                 if(option.length > 0) {
+                                    let inversedSelection = '';
                                     const optionEntries = option.split(' ');
                                     let to = optionEntries[3];
                                     to = to.substring(0, to.length-1)
                                     let from = optionEntries[1];
                                     from = from.substring(1);
                                     inversedSelection = inversedSelection.concat(optionEntries[0] + ' [' + to + ' --> ' + from + '],');
+                                    let foundTerm = false;
+                                    influence.forEach(term => {
+                                        if(inversedSelection === term.option) {
+                                            foundTerm = true;
+                                        }
+                                    });
+                                    if(foundTerm) {
+                                        newData = newData.concat(option.replace('-->','➤'));
+                                    }
+                                    else {
+                                        newData = newData.concat(option);
+                                    }
+                                    newData = newData.concat(',');
                                 }
                             });
-                            
-                            let foundTerm = false;
-                            influence.forEach(term => {
-                                if(inversedSelection === term.option) {
-                                    foundTerm = true
+                            influencingOptionsTable.addRow({option:newData, influence: row.getData().influence});
+                            row.delete();
+                        });
+                        
+                        influencingOptionsTable.getRows().forEach(row => {
+                            let wasActuallyChanged = true;
+                            row.getData().option.split(',').forEach(option => {
+                                if(option.length > 0) {
+                                    const optionEntries = option.split(' ');
+                                    if(optionEntries[2] === '-->') {
+                                        wasActuallyChanged = false;
+                                    }
                                 }
                             });
-                            if(!foundTerm) {
-                                row.getElement().style.color = '#bfbfbf';
+                            if(wasActuallyChanged) {
+                                // row.getElement().style.color = '#07ce00';
+                                row.update({change: 'Actual Influencing Options Changes'});
+                            }
+                            else {
+                                row.update({change: 'Further Possible Changes'});
                             }
                         });
+                        
+                        influencingOptionsTable.setSort("option", "asc");
+                        influencingOptionsTable.setSort("influence", "desc");
+                        influencingOptionsTable.setSort(
+                             {column:"change", dir:"des"},
+                             {column:"influence", dir:"des"},
+                        );
                     }
                     
                     const methodEntries = method.split('.');
@@ -1672,6 +1710,9 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     maxHeight:"450px",
                     selectable: true,
                     groupBy:"change",
+                    groupStartOpen:function(value){
+                        return value === 'Actual Influencing Options Changes' || value === undefined;
+                    },
                     columns: [
                         { title: "Options", field: "option", sorter: "string", formatter: customFormatter }, 
                         { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
