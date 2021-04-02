@@ -1088,7 +1088,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 const influencingOptionsTable = new Tabulator("#influencingOptions", {
                     layout: "fitColumns",
                     maxHeight:"450px",
-                    groupBy:"change",
+                    // groupBy:"change",
                     groupStartOpen:function(value){
                         return value === 'Actual Influencing Options Changes';
                     },
@@ -1280,10 +1280,11 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                             });
                             if(wasActuallyChanged) {
                                 // row.getElement().style.color = '#07ce00';
-                                row.update({change: 'Actual Influencing Options Changes'});
+                                // row.update({change: 'Actual Influencing Options Changes'});
                             }
                             else {
-                                row.update({change: 'Further Possible Changes'});
+                                // row.update({change: 'Further Possible Changes'});
+                                row.delete();
                             }
                         });
                         
@@ -1709,7 +1710,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     layout: "fitColumns",
                     maxHeight:"450px",
                     selectable: true,
-                    groupBy:"change",
+                    // groupBy:"change",
                     groupStartOpen:function(value){
                         return value === 'Actual Influencing Options Changes' || value === undefined;
                     },
@@ -1868,10 +1869,11 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                             });
                             if(wasActuallyChanged) {
                                 // row.getElement().style.color = '#07ce00';
-                                row.update({change: 'Actual Influencing Options Changes'});
+                                // row.update({change: 'Actual Influencing Options Changes'});
                             }
                             else {
-                                row.update({change: 'Further Possible Changes'});
+                                // row.update({change: 'Further Possible Changes'});
+                                row.delete();
                             }
                         });
                     }
