@@ -596,10 +596,10 @@ function _slicing(context: vscode.ExtensionContext) {
                         targetMethodName: response.targetMethodName
                     });
 
-                    const className = commonSources[message.selectedOptions[0]][2].replace(regex, '/');
-                    const method = 'main';
-                    let uri = vscode.Uri.file(filesRoot + className + '.java');
-                    openFileAndNavigate(uri, method);
+                    // const className = commonSources[message.selectedOptions[0]][2].replace(regex, '/');
+                    // const method = 'main';
+                    // let uri = vscode.Uri.file(filesRoot + className + '.java');
+                    // openFileAndNavigate(uri, method);
                     return;
                 }
                 case 'globalInfluence' :
