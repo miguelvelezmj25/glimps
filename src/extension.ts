@@ -1151,8 +1151,8 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                                                
                 const table = new Tabulator("#hotspot-diff-table", {
-                    // layout:"fitData",
-                    layout:"fitColumns",
+                    layout:"fitData",
+                    // layout:"fitColumns",
                     maxHeight:"450px",
                     dataTree:true,
                     dataTreeStartExpanded:false,
@@ -1177,7 +1177,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     const config1 = rowData.config1;
                     const config2 = rowData.config2;
                     
-                    if(config1 === "Not executed" || config2 === "Not executed"){
+                    if(config1 === "No entry" || config2 === "No entry"){
                         for(let i = 1; i < row.getCells().length; i++) {
                             row.getCells()[i].getElement().style.backgroundColor = "#fbf9f9";
                             row.getCells()[i].getElement().style.color = "#990000";
