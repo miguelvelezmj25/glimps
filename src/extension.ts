@@ -788,7 +788,7 @@ function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: 
                         short2Methods.set(entry[0], entry[1]);
                     });
                     
-                    const graphData = 'digraph { ranksep=1.0 node [shape=box fillcolor=white style=filled] concentrate=true ' + event.data.connections.connections + ' }';
+                    const graphData = 'digraph { ranksep=1.0 node [shape=box fillcolor=tan style=filled] concentrate=true ' + event.data.connections.connections + ' }';
                     d3.select("#connection-graph").graphviz()
                         .renderDot(graphData)
                         .on("end", interactive);
