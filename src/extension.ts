@@ -1642,6 +1642,8 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
+        <div style="font-size: 16px;"><b>Compare influence of options between configurations</b></div>
+        <br>
         <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
             <select name="configSelect" id="configSelect">
@@ -1658,11 +1660,12 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
         <br>
         <div id="selected-config-time" style="font-size: 14px;">Execution time:</div>
         <br>
+        <div id="influence-table-text" style="display: inline; font-size: 14px;"></div>
         <div id="perfModel"></div>
         <br>
         <br>
-        <div style="font-size: 14px;"><b>Options' Local Influence</b></div>
-        <br>
+        <div style="font-size: 14px;"><b>Influence in methods of selected options</b></div>
+<!--        <br>-->
         <div id="localInfluence"></div>
         <br>
 <!--        <hr>-->
@@ -1837,6 +1840,14 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     perfModelTable.setSort("influence", "desc");
                                         
                     const compare = document.getElementById("compareSelect").value;    
+                    
+                    if(config === compare) {
+                        document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values in " + config;
+                    }
+                    else {
+                        document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values from " + config + " to " + compare + "</b>";
+                    }
+                    
                     if(config !== compare) {                        
                         perfModelTable.getRows().forEach(row => {
                             let newData = '';
