@@ -222,6 +222,8 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
     </head>
     <body>
+        <div style="font-size: 16px;"><b>View values selected in each configuration</b></div>
+        <br>
         <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
             <select name="configSelect" id="configSelect" onchange="displayConfig()">
@@ -247,13 +249,14 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <br>
         <hr>
         <br>
-        <div style="display: inline; font-size: 14px;"><b>Save new configuration:</b></div> 
-        <input type="text" id="config-name" name="config-name" placeholder="Enter name">
+        <div><button id="show-save-config-trigger">Save new configuration</button></div>
+        <div style="display: inline; font-size: 14px; visibility: hidden;" id="save-new-config-text"><b>Save new configuration:</b></div> 
+        <input style="visibility: hidden;" type="text" id="config-name" name="config-name" placeholder="Enter name">
         <br>
         <br>
-        <div id="saveConfig"></div>
+        <div id="saveConfig" style="visibility: hidden;"></div>
         <br>
-        <div><button id="save-config-trigger">Save configuration</button></div>
+        <div style="visibility: hidden;"><button id="save-config-trigger">Save configuration</button></div>
         <br>
         <script type="text/javascript">     
             const names2Configs = ${names2Configs};
@@ -322,6 +325,14 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
             });
             const config = document.getElementById("configSelect").value;
             saveConfigTable.setData(names2Configs[config]);
+            
+            document.getElementById("show-save-config-trigger").addEventListener("click", function () {
+                document.getElementById("show-save-config-trigger").style.display = "none";
+                document.getElementById("save-new-config-text").style.visibility = "visible";
+                document.getElementById("config-name").style.visibility = "visible";
+                document.getElementById("saveConfig").style.visibility = "visible";
+                document.getElementById("save-config-trigger").style.visibility = "visible";
+            });
                         
             (function () {
                 const vscode = acquireVsCodeApi();
