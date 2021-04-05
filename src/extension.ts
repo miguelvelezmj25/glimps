@@ -1081,7 +1081,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <div id="hotspot-diff-table"></div>
         <br>
         <br>
-        <div style="font-size: 14px;"><b>Influence of options in the selected method</b></div>
+        <div id="influence-table-text" style="font-size: 14px;"></div>
 <!--        <br>-->
         <div id="influencingOptions"></div>
         <br>
@@ -1365,6 +1365,13 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     
                     const configToSelect = document.getElementById("configSelect").value;
                     const compareSelect = document.getElementById("compareSelect").value
+                    
+                    if(configToSelect === compareSelect) {
+                        document.getElementById("influence-table-text").innerHTML = "<b>Options and their influence when changing values in " + configToSelect + " in the selected method above";
+                    }
+                    else {
+                        document.getElementById("influence-table-text").innerHTML = "<b>Options and their influence when changing values from " + configToSelect + " ➤ " + compareSelect + " in the selected method above</b>";
+                    }
                     
                     table.addColumn({title:configToSelect, field:"config1", sorter: "number", hozAlign: "right"});
                     table.addColumn({title:compareSelect, field:"config2", sorter: "number", hozAlign: "right"});
@@ -1672,7 +1679,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
         <div id="perfModel"></div>
         <br>
         <br>
-        <div style="font-size: 14px;"><b>Influence in methods of selected options</b></div>
+        <div style="font-size: 14px;"><b>Hot spots influenced by the selected options above</b></div>
 <!--        <br>-->
         <div id="localInfluence"></div>
         <br>
