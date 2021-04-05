@@ -544,7 +544,8 @@ function _slicing(context: vscode.ExtensionContext) {
     const methods2Options = getMethods2Options(methods2ModelsRaw);
     const methods2Lines = getMethods2Lines(dataDir);
     commonSources = getSliceSourcesRaw(dataDir);
-    slicingPanel.webview.html = getSlicingContent(methods2Options, methods2Lines);
+    const legend = vscode.Uri.file(path.join(context.extensionPath, 'media', 'legend.png'));
+    slicingPanel.webview.html = getSlicingContent(methods2Options, methods2Lines, slicingPanel.webview.asWebviewUri(legend));
 
     const sliceInfoRaw = getSliceInfoRaw(dataDir);
     const port = sliceInfoRaw.port;
@@ -699,7 +700,7 @@ function getSliceInfoRaw(dataDir: string) {
     return {programName: sliceInfo[0], port: sliceInfo[1]};
 }
 
-function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: Map<string, string>) {
+function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: Map<string, string>, legend: vscode.Uri) {
     const optionsToAnalyze = new Set(OPTIONS_TO_ANALYZE);
 
     let sourcesToShow: { [p: string]: string[] } = {};
@@ -762,23 +763,28 @@ function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: 
         <script src="https://d3js.org/d3.v5.min.js"></script>
         <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
         <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
-        <div style="font-size: 14px;"><b>Select Influencing Options to Trace:</b></div>
+        <div style="font-size: 16px;"><b>Trace options to hotspots</b></div>
+        <br>
+        <div style="font-size: 14px;"><b>Select options:</b></div>
         <br>
         ${commonSourcesSelect}
         <br>
-        <div style="font-size: 14px;"><b>Select Hotspot:</b></div>
+        <div style="font-size: 14px;"><b>Select hotspot:</b></div>
         <br>
         ${selectedTarget}
         <br>
         <br>
-        <div style="display: inline; padding-right: 10px;"><button id="global-influence-trigger">View Options' Influence</button></div>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
+        <div style="display: inline; font-size: 14px;"><b>Trace from Options to the Hotspot</b></div>
+        <img style="display: inline; padding-left: 20px;" src="${legend}" width="400">
         <br>
-        <br>
-        <br>
-        <div style="font-size: 14px;"><b>Trace from Options to the Hotspot:</b></div>
         <br>
         <div id="connection-graph"></div>
+        <br>
+        <br>
+        <hr>
+        <br>
+        <div style="display: inline; padding-right: 10px;"><button id="global-influence-trigger">View Options' Influence</button></div>
+        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
         <script type="text/javascript">         
             (function () {
                 const vscode = acquireVsCodeApi();
@@ -1056,6 +1062,8 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
     </head>
     <body>
+        <div style="font-size: 16px;"><b>Compare hot spot profiles between configurations</b></div>
+        <br>
         <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
         <div style="display: inline;">
             <select name="configSelect" id="configSelect">
@@ -1073,8 +1081,8 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
         <div id="hotspot-diff-table"></div>
         <br>
         <br>
-        <div id="local-model-method" style="font-size: 14px;"><b>Local Influencing Options</b></div>
-        <br>
+        <div style="font-size: 14px;"><b>Influence of options in the selected method</b></div>
+<!--        <br>-->
         <div id="influencingOptions"></div>
         <br>
 <!--        <hr>-->
@@ -1845,7 +1853,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                         document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values in " + config;
                     }
                     else {
-                        document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values from " + config + " to " + compare + "</b>";
+                        document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values from " + config + " ➤ " + compare + "</b>";
                     }
                     
                     if(config !== compare) {                        
