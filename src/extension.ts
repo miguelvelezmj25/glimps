@@ -982,6 +982,10 @@ function _perfProfiles(context: vscode.ExtensionContext) {
                             className = className.concat("/");
                         }
                     }
+                    if (className.indexOf("$") >= 0) {
+                        className = className.substring(0, className.indexOf("$"));
+                    }
+
                     const method = fileData[fileData.length - 1];
                     let uri = vscode.Uri.file(filesRoot + className + '.java');
                     openFileAndNavigate(uri, method);
