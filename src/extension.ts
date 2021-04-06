@@ -15,7 +15,7 @@ let target: number = -1;
 let traceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let hotspotStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
 let sourceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(0,255,0,0.25)'});
-let filesToHighlight = new Map<String, Set<String>>();
+let filesToHighlight = new Map<string, Set<string>>();
 
 let CONFIG_TO_PROFILE: string = '';
 let CONFIG_TO_COMPARE: string = '';
@@ -648,17 +648,21 @@ function _slicing(context: vscode.ExtensionContext) {
         editorPath = editorPath.replace(workspaceFolders[0].uri.path, "");
         editorPath = editorPath.replace("/src/main/java/", "");
 
-        if (editorPath in hotspotInfluencesRaw) {
-            hotspotStyle.dispose();
-            hotspotStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
-            let ranges: vscode.Range[] = [];
-            hotspotInfluencesRaw[editorPath].forEach(entry => {
-                ranges.push(doc.lineAt((+entry - 1)).range);
-            });
-            vscode.window.activeTextEditor.setDecorations(hotspotStyle, ranges);
-        }
+        Object.entries(hotspotInfluencesRaw).forEach(entry => {
+            if (editorPath.endsWith(entry[0])) {
+                hotspotStyle.dispose();
+                hotspotStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
+                let ranges: vscode.Range[] = [];
+                entry[1].forEach(entry => {
+                    ranges.push(doc.lineAt((+entry - 1)).range);
+                });
+                if (vscode.window.activeTextEditor) {
+                    vscode.window.activeTextEditor.setDecorations(hotspotStyle, ranges);
+                }
+            }
+        });
 
-        if (editorPath === sourcesFile) {
+        if (editorPath.endsWith(sourcesFile)) {
             sourceStyle.dispose();
             sourceStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(0,255,0,0.25)'});
             let ranges: vscode.Range[] = [];
@@ -668,7 +672,12 @@ function _slicing(context: vscode.ExtensionContext) {
             vscode.window.activeTextEditor.setDecorations(sourceStyle, ranges);
         }
 
-        const lines = filesToHighlight.get(editorPath);
+        let lines = new Set<string>();
+        filesToHighlight.forEach((value, key) => {
+            if (editorPath.endsWith(key)) {
+                lines = value;
+            }
+        });
         if (!lines || lines.size === 0) {
             return;
         }
