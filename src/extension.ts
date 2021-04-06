@@ -1309,10 +1309,10 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                         
                         influencingOptionsTable.setSort("option", "asc");
                         influencingOptionsTable.setSort("influence", "desc");
-                        influencingOptionsTable.setSort(
-                             {column:"change", dir:"des"},
-                             {column:"influence", dir:"des"},
-                        );
+                        // influencingOptionsTable.setSort(
+                        //      {column:"change", dir:"des"},
+                        //      {column:"influence", dir:"des"},
+                        // );
                     }
                     
                     const methodEntries = method.split('.');
@@ -1943,10 +1943,11 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                     });
                     
                     perfModelTable.setSort("influence", "asc");
-                    perfModelTable.setSort(
-                         {column:"change", dir:"des"},
-                         {column:"influence", dir:"des"},
-                    );
+                    perfModelTable.setSort("influence", "desc");
+                    // perfModelTable.setSort(
+                    //      {column:"change", dir:"des"},
+                    //      {column:"influence", dir:"des"},
+                    // );
                 }
                 viewPerfModel();
                     
