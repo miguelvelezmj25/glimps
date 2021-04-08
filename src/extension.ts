@@ -1119,7 +1119,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                                 
                 const influencingOptionsTable = new Tabulator("#influencingOptions", {
                     layout: "fitColumns",
-                    maxHeight:"400px",
+                    maxHeight:"300px",
                     // groupBy:"change",
                     groupStartOpen:function(value){
                         return value === 'Actual Influencing Options Changes';
@@ -1185,7 +1185,7 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 const table = new Tabulator("#hotspot-diff-table", {
                     layout:"fitData",
                     // layout:"fitColumns",
-                    maxHeight:"400px",
+                    maxHeight:"300px",
                     dataTree:true,
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
@@ -1712,7 +1712,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 
                 const localInfluenceTable = new Tabulator("#localInfluence", {
                     layout: "fitColumns",
-                    maxHeight:"400px",
+                    maxHeight:"300px",
                     columns: [
                         { title: "Influenced Hot Spot", field: "methods", sorter: "string" }, 
                         { title: "Influence (s)",  field: "influence",  sorter: influenceSort, hozAlign:"right" },
@@ -1750,7 +1750,7 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                                       
                 const perfModelTable = new Tabulator("#perfModel", {
                     layout: "fitColumns",
-                    maxHeight:"400px",
+                    maxHeight:"300px",
                     selectable: true,
                     // groupBy:"change",
                     groupStartOpen:function(value){
