@@ -1089,6 +1089,10 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 ${rightConfigs}
             </select>
         </div>
+        <div style="display: inline; margin-left: 20px;">
+            <input type="checkbox" id="all-hotspots" name="all-hotspots">
+            <label for="all-hotspots">View all hotspots</label>
+        </div>
         <br>
         <br>
         <div id="hotspot-diff-table"></div>
@@ -1395,12 +1399,20 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     const resp = event.data.response;
                     table.setData(resp);
                     table.setSort("config1", "desc");
-                                        
+                                                            
                     table.getRows().forEach(row => {
                         if(methodToProfile.length > 0 && row.getData().methodLong.startsWith(methodToProfile)) {
                             row.select();
                         }
+                        else if(!document.getElementById("all-hotspots").checked) {
+                            row.delete();
+                        }
                     });
+                });
+                
+                document.getElementById("all-hotspots").addEventListener("change", () => {
+                    console.l9og
+                    compareProfiles();
                 });
                 
                 document.getElementById("trace-trigger").addEventListener("click", () => {                   
