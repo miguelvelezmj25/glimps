@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {DocumentSymbol, Selection, SymbolKind, TextEditorRevealType, WorkspaceFolder} from 'vscode';
+import {DocumentSymbol, Selection, SymbolKind, TextEditorRevealType, ThemeColor, WorkspaceFolder} from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as parse from 'csv-parse/lib/sync';
@@ -12,6 +12,7 @@ let commonSources: { [p: string]: string[] } = {};
 let targetClass = "";
 let target: number = -1;
 
+let focusStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({isWholeLine: true, backgroundColor: new ThemeColor('editor.rangeHighlightBackground')});
 let traceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 let hotspotStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
 let sourceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(0,255,0,0.25)'});
@@ -45,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
     const perfProfiles = vscode.commands.registerCommand('perfProfiles.start', () => _perfProfiles(context));
     const slicingTarget = vscode.commands.registerCommand('sliceTarget.start', () => _sliceTarget(context));
     const slicing = vscode.commands.registerCommand('slicing.start', () => _slicing(context));
-    context.subscriptions.push(configDialog, globalModel, perfProfiles, slicingTarget, slicing);
+    context.subscriptions.push(configDialog, globalModel, perfProfiles, slicingTarget, slicing, focusStyle);
 }
 
 // this method is called when your extension is deactivated
@@ -1051,6 +1052,7 @@ function openFileAndNavigate(uri: vscode.Uri, method: string) {
                         if (!symbol) {
                             return;
                         }
+                        editor.setDecorations(focusStyle, [symbol.range]);
                         editor.revealRange(symbol.range, TextEditorRevealType.InCenter);
                         editor.selection = new Selection(symbol.range.start, symbol.range.start);
                     });
