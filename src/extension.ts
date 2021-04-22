@@ -713,16 +713,16 @@ function getSlicingContent(uniqueOptions: Map<string, string[]>, methods2Lines: 
     const optionsToAnalyze = new Set(OPTIONS_TO_ANALYZE);
 
     let sourcesToShow: { [p: string]: string[] } = {};
-    if (METHOD_TO_PROFILE.length !== 0) {
-        const influencingOptions = uniqueOptions.get(METHOD_TO_PROFILE);
-        Object.entries(commonSources).forEach((entry: any) => {
-            if (influencingOptions?.includes(entry[0])) {
-                sourcesToShow[entry[0]] = [entry[1][0], entry[1][1], entry[1][2]];
-            }
-        });
-    } else {
+    // if (METHOD_TO_PROFILE.length !== 0) {
+    //     const influencingOptions = uniqueOptions.get(METHOD_TO_PROFILE);
+    //     Object.entries(commonSources).forEach((entry: any) => {
+    //         if (influencingOptions?.includes(entry[0])) {
+    //             sourcesToShow[entry[0]] = [entry[1][0], entry[1][1], entry[1][2]];
+    //         }
+    //     });
+    // } else {
         sourcesToShow = commonSources;
-    }
+    // }
 
     let commonSourcesSelect = '';
     Object.entries(sourcesToShow).forEach(entry => {
@@ -1051,7 +1051,7 @@ function openFileAndNavigate(uri: vscode.Uri, method: string) {
                         if (!symbol) {
                             return;
                         }
-                        editor.revealRange(symbol.range, TextEditorRevealType.Default);
+                        editor.revealRange(symbol.range, TextEditorRevealType.InCenter);
                         editor.selection = new Selection(symbol.range.start, symbol.range.start);
                     });
             });
