@@ -1,7 +1,6 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {DocumentSymbol, Selection, SymbolKind, TextEditorRevealType, ThemeColor} from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as parse from 'csv-parse/lib/sync';
@@ -112,6 +111,12 @@ function _configDialog(context: vscode.ExtensionContext) {
                     sleep(3000);
                     panel.webview.postMessage({time: time});
                     return;
+                case 'profile' :
+                    if (profilePanel) {
+                        profilePanel.dispose();
+                    }
+                    vscode.commands.executeCommand('profiles.start');
+                    return;
             }
         },
         undefined,
@@ -209,7 +214,10 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <div style="display: inline;"><button id="get-perf-trigger">Get execution time</button></div>
         <div id="execTime" style="display: inline; margin-left: 20px;" >Time: </div> 
         <br>
-
+        <br>
+        <br>
+        <div style="display: inline;"><button id="profile-trigger">Profile configuration</button></div>
+        <br>
         <script type="text/javascript">     
             const rawConfigs = ${rawConfigRaw};
             const names2Configs = ${names2Configs};
@@ -244,7 +252,14 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                     document.getElementById("execTime").innerHTML = 'Calculating ...';
                     vscode.postMessage({
                         command: 'perf',
-                        config: configTable.getData() 
+                        config: configTable.getData(), 
+                    });
+                });
+                
+                document.getElementById("profile-trigger").addEventListener("click", function () {    
+                    vscode.postMessage({
+                        command: 'profile',
+                        config: configTable.getData(), 
                     });
                 });
             }())
