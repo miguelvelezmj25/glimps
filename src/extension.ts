@@ -119,12 +119,22 @@ function _configDialog(context: vscode.ExtensionContext) {
                     });
                     const model = getModel(names2ModelsRaw);
                     const time = getTime(model, config);
+                    sleep(3000);
+                    panel.webview.postMessage({time: time});
                     return;
             }
         },
         undefined,
         context.subscriptions
     );
+}
+
+function sleep(milliseconds: number) {
+    const date = Date.now();
+    let currentDate = null;
+    do {
+        currentDate = Date.now();
+    } while (currentDate - date < milliseconds);
 }
 
 function getAllConfigsRaw(dataDir: string) {
@@ -227,8 +237,11 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <br>
         <div id="perfConfig"></div>
         <br>
-        <div><button id="get-perf-trigger">Get execution time</button></div>
+<!--        '-->
+        <div style="display: inline;"><button id="get-perf-trigger">Get execution time</button></div>
+        <div id="execTime" style="display: inline; margin-left: 20px;" >Time: </div> 
         <br>
+
         <script type="text/javascript">     
             const rawConfigs = ${rawConfigRaw};
             const names2Configs = ${names2Configs};
@@ -249,13 +262,18 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                     { title: "Value",  field: "value", editor:"select", editorParams: optionValues, headerSort: false }
                 ],
             });
-            const config = rawConfigs['config'];
+            const config = rawConfigs["config"];
             configTable.setData(names2Configs[config]);
+            
+            window.addEventListener('message', event => {
+                document.getElementById("execTime").innerHTML = 'Time: ' +  event.data.time.toFixed(2) + ' seconds';
+            });
                                     
             (function () {
                 const vscode = acquireVsCodeApi();
                 
                 document.getElementById("get-perf-trigger").addEventListener("click", function () {
+                    document.getElementById("execTime").innerHTML = 'Calculating ...';
                     vscode.postMessage({
                         command: 'perf',
                         config: configTable.getData() 
