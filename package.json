@@ -1,6 +1,6 @@
 {
-  "name": "perf-debug",
-  "displayName": "perf-debug",
+  "name": "debug-helper",
+  "displayName": "debug-helper",
   "description": "",
   "version": "0.0.1",
   "publisher": "mvelezce",
@@ -11,50 +11,23 @@
     "Research prototype"
   ],
   "activationEvents": [
-    "onCommand:configDialog.start",
-    "onCommand:globalModel.start",
-    "onCommand:perfProfiles.start",
-    "onCommand:slicing.start",
-    "onCommand:sliceTarget.start"
+    "onCommand:execTime.start",
+    "onCommand:profiles.start"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "configDialog.start",
-        "title": "Configuration Dialog",
-        "category": "Perf Debug"
+        "command": "execTime.start",
+        "title": "Execution Time",
+        "category": "Debug Helper"
       },
       {
-        "command": "globalModel.start",
-        "title": "View Options' Influence",
-        "category": "Perf Debug"
-      },
-      {
-        "command": "perfProfiles.start",
-        "title": "Profile Configurations | Hotspot View",
-        "category": "Perf Debug"
-      },
-      {
-        "command": "slicing.start",
-        "title": "Trace Options to Hotspots",
-        "category": "Perf Debug"
-      },
-      {
-        "command": "sliceTarget.start",
-        "title": "Add Hotspot for Tracing",
-        "category": "Perf Debug"
+        "command": "profiles.start",
+        "title": "Profiles",
+        "category": "Debug Helper"
       }
-    ],
-    "menus": {
-      "editor/context": [
-        {
-          "command": "sliceTarget.start",
-          "group": "slicing",
-          "when": "editorTextFocus"
-        }
-      ]
-    }
+    ]
   },
   "repository": {
     "type": "git",
