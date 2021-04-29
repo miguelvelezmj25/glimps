@@ -341,7 +341,7 @@ function getHotspotDiffContent() {
                 const table = new Tabulator("#hotspot-diff-table", {
                     layout:"fitData",
                     // layout:"fitColumns",
-                    maxHeight:"300px",
+                    // maxHeight:"300px",
                     dataTree:true,
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
