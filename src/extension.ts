@@ -334,6 +334,10 @@ function getHotspotDiffContent() {
         <br>
         <div id="hotspot-diff-table"></div>
         <br>
+        <br>
+<!--        <div><button id="save-trigger">Save profile</button></div>-->
+        <br>
+        <br>
         <script type="text/javascript">                  
             (function () {
                 const vscode = acquireVsCodeApi();
