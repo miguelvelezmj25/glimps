@@ -1,14 +1,17 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {DocumentSymbol, Selection, SymbolKind, TextEditorRevealType, ThemeColor, WorkspaceFolder} from 'vscode';
+import {DocumentSymbol, Selection, SymbolKind, TextEditorRevealType, ThemeColor} from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as parse from 'csv-parse/lib/sync';
 
 const request = require('sync-request');
 
-let focusStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({isWholeLine: true, backgroundColor: new ThemeColor('editor.rangeHighlightBackground')});
+let focusStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({
+    isWholeLine: true,
+    backgroundColor: new ThemeColor('editor.rangeHighlightBackground')
+});
 let traceStyle: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
 
 let CONFIG_TO_PROFILE: string = '';
@@ -73,22 +76,6 @@ function _configDialog(context: vscode.ExtensionContext) {
     panel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
-                case 'globalInfluence' :
-                    CONFIG_TO_PROFILE = message.config;
-                    CONFIG_TO_COMPARE = message.compare;
-                    if (globalModelPanel) {
-                        globalModelPanel.dispose();
-                    }
-                    vscode.commands.executeCommand('globalModel.start');
-                    return;
-                case 'profile' :
-                    CONFIG_TO_PROFILE = message.config;
-                    CONFIG_TO_COMPARE = message.compare;
-                    if (profilePanel) {
-                        profilePanel.dispose();
-                    }
-                    vscode.commands.executeCommand('perfProfiles.start');
-                    return;
                 case 'save' :
                     const configName = message.configName;
                     if (configName.length === 0) {
@@ -120,7 +107,7 @@ function _configDialog(context: vscode.ExtensionContext) {
 function getAllConfigsRaw(dataDir: string) {
     let configs: string[] = [];
     fs.readdirSync(path.join(dataDir, 'configs/')).forEach(fileName => {
-        if (fileName.endsWith('.csv')) {
+        if (fileName.endsWith('user.csv')) {
             fileName = fileName.replace(".csv", "");
             configs.push(fileName);
         }
@@ -187,7 +174,8 @@ function getNames2Configs(names2ConfigsRaw: any) {
 
 function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
     const configs = getConfigsProfile(rawConfigs);
-    const names2Configs = getNames2Configs(names2ConfigsRaw);
+
+    const rawConfigRaw = '{config: "' + rawConfigs[0] + '"}';
 
     let optionsValues = '{';
     for (let i = 0; i < optionValuesRaw.length; i++) {
@@ -201,6 +189,8 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
     }
     optionsValues = optionsValues.concat('}');
 
+    const names2Configs = getNames2Configs(names2ConfigsRaw);
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -212,92 +202,17 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
         <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
     </head>
     <body>
-        <div style="font-size: 16px;"><b>View values selected in each configuration</b></div>
+        <div style="font-size: 16px;"><b>Get the execution time of a configuration</b></div>
         <br>
-        <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
-        <div style="display: inline;">
-            <select name="configSelect" id="configSelect" onchange="displayConfig()">
-                ${configs}
-            </select>
-        </div>
-        <div style="display: inline; font-size: 14px;">compare to: </div>
-        <div style="display: inline;">
-            <select name="compareSelect" id="compareSelect" onchange="displayConfig()">
-                ${configs}
-            </select>
-        </div>
+        <div id="saveConfig"></div>
         <br>
-        <br>
-        <div id="displayConfig"></div>
-        <br>
-        <br>
-        <div style="display: inline; padding-right: 10px;"><button id="global-influence-trigger">View Options' Influence</button></div>
-        <div style="display: inline;"><button id="profile-config-trigger">Profile Configurations</button></div>
-        <br>
-        <br>
-        <br>
-        <br>
-        <hr>
-        <br>
-        <div><button id="show-save-config-trigger">Save new configuration</button></div>
-        <div style="display: inline; font-size: 14px; visibility: hidden;" id="save-new-config-text"><b>Save new configuration:</b></div> 
-        <input style="visibility: hidden;" type="text" id="config-name" name="config-name" placeholder="Enter name">
-        <br>
-        <br>
-        <div id="saveConfig" style="visibility: hidden;"></div>
-        <br>
-        <div style="visibility: hidden;"><button id="save-config-trigger">Save configuration</button></div>
+        <div><button id="save-config-trigger">Save configuration</button></div>
         <br>
         <script type="text/javascript">     
+            const rawConfigs = ${rawConfigRaw};
             const names2Configs = ${names2Configs};
-                             
-            const configTable = new Tabulator("#displayConfig", {
-                layout: "fitColumns",
-                columns: [
-                    { title: "Option", field: "option", sorter: "string" }, 
-                    { title: document.getElementById("configSelect").value,  field: "config1",  sorter: "string" },
-                    { title: document.getElementById("compareSelect").value,  field: "config2",  sorter: "string" }
-                ],
-            });
-                        
-            function displayConfig() {
-                configTable.hideColumn("config1");
-                configTable.hideColumn("config2");
-                
-                const config = document.getElementById("configSelect").value;
-                const compare = document.getElementById("compareSelect").value;
-                configTable.addColumn({title:config, field: "config1",  sorter: "string" });
-                configTable.addColumn({title:compare, field: "config2",  sorter: "string" });
-                if(config === compare) {
-                    configTable.hideColumn("config2");
-                }
-                
-                const configValues = names2Configs[config];
-                const compareValues = names2Configs[compare];
-                
-                const values = new Map();
-                configValues.forEach(entry => {
-                    values.set(entry.option, [entry.value]);
-                });
-                compareValues.forEach(entry => {
-                    values.get(entry.option).push(entry.value);
-                });
-                
-                let data = [];
-                values.forEach((value, key) => {
-                    data.push({option: key, config1: value[0], config2: value[1]});
-                });
-                configTable.setData(data);
-                
-                configTable.getRows().forEach(row => {
-                    if(config !== compare && row.getData().config1 === row.getData().config2) {
-                        row.getElement().style.color = '#bfbfbf';
-                    }
-                });
-            }
-            displayConfig();
-                        
-            const optionValuesData = ${optionsValues};
+            const optionValuesData = ${optionsValues};                                                     
+
             const optionValues = function(cell){
                 const options = optionValuesData[cell.getRow().getData().option];
                 const values = {};
@@ -305,7 +220,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 values[options[1]] = options[1];
                 return {values:values};
             }
-            
+
             const saveConfigTable = new Tabulator("#saveConfig", {
                 layout: "fitColumns",
                 columns: [
@@ -313,17 +228,9 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                     { title: "Value",  field: "value", editor:"select", editorParams: optionValues, headerSort: false }
                 ],
             });
-            const config = document.getElementById("configSelect").value;
+            const config = rawConfigs['config'];
             saveConfigTable.setData(names2Configs[config]);
-            
-            document.getElementById("show-save-config-trigger").addEventListener("click", function () {
-                document.getElementById("show-save-config-trigger").style.display = "none";
-                document.getElementById("save-new-config-text").style.visibility = "visible";
-                document.getElementById("config-name").style.visibility = "visible";
-                document.getElementById("saveConfig").style.visibility = "visible";
-                document.getElementById("save-config-trigger").style.visibility = "visible";
-            });
-                        
+                                    
             (function () {
                 const vscode = acquireVsCodeApi();
                 
@@ -332,22 +239,6 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                         command: 'save',
                         configName: document.getElementById("config-name").value.trim(),
                         config: saveConfigTable.getData() 
-                    });
-                });
-                                
-                document.getElementById("global-influence-trigger").addEventListener("click", function () {    
-                    vscode.postMessage({
-                        command: 'globalInfluence',
-                        config: document.getElementById("configSelect").value,
-                        compare: document.getElementById("compareSelect").value,
-                    });
-                });
-                
-                document.getElementById("profile-config-trigger").addEventListener("click", function () {    
-                    vscode.postMessage({
-                        command: 'profile',
-                        config: document.getElementById("configSelect").value,
-                        compare: document.getElementById("compareSelect").value,
                     });
                 });
             }())
