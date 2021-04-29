@@ -49,6 +49,38 @@ export function deactivate() {
     }
 }
 
+function getModel(names2ModelsRaw: any) {
+    names2ModelsRaw['models'].forEach((entry: any) => {
+        if (entry['name'] === 'default') {
+            return entry ['terms'];
+        }
+    });
+    return names2ModelsRaw['models'][0]['terms'];
+}
+
+function getTime(model: any, config: string) {
+    let time = 0.0;
+
+    const configEntries = config.split('\n');
+    model.forEach((term: any) => {
+        let set = true;
+        term['options'].forEach((option: any) => {
+            configEntries.forEach(entry => {
+                const items = entry.split(",");
+                if (items[0] === option['option'] && items[1] === option['from']) {
+                    set = false;
+                }
+            });
+
+        });
+        if (set) {
+            time += term['time'];
+        }
+    });
+
+    return time;
+}
+
 function _configDialog(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
@@ -73,15 +105,11 @@ function _configDialog(context: vscode.ExtensionContext) {
     const optionValuesRaw = getOptionsValuesRaw(dataDir);
     panel.webview.html = getConfigDialogContent(allConfigsRaw, names2ConfigsRaw, optionValuesRaw);
 
+    const names2ModelsRaw = require(path.join(dataDir, 'perf-models.json'));
     panel.webview.onDidReceiveMessage(
         message => {
             switch (message.command) {
-                case 'save' :
-                    const configName = message.configName;
-                    if (configName.length === 0) {
-                        vscode.window.showErrorMessage("Name the configuration before saving it");
-                        return;
-                    }
+                case 'perf' :
                     let config = "";
                     message.config.forEach((entry: any) => {
                         config = config.concat(entry.option);
@@ -89,13 +117,8 @@ function _configDialog(context: vscode.ExtensionContext) {
                         config = config.concat(entry.value);
                         config = config.concat("\n");
                     });
-                    fs.writeFile(path.join(dataDir, 'configs', configName + '.csv'), config, (err) => {
-                        if (err) {
-                            vscode.window.showErrorMessage("Error saving configuration");
-                        } else {
-                            vscode.window.showInformationMessage("Configuration saved");
-                        }
-                    });
+                    const model = getModel(names2ModelsRaw);
+                    const time = getTime(model, config);
                     return;
             }
         },
@@ -173,8 +196,6 @@ function getNames2Configs(names2ConfigsRaw: any) {
 }
 
 function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, optionValuesRaw: any[]) {
-    const configs = getConfigsProfile(rawConfigs);
-
     const rawConfigRaw = '{config: "' + rawConfigs[0] + '"}';
 
     let optionsValues = '{';
@@ -204,9 +225,9 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
     <body>
         <div style="font-size: 16px;"><b>Get the execution time of a configuration</b></div>
         <br>
-        <div id="saveConfig"></div>
+        <div id="perfConfig"></div>
         <br>
-        <div><button id="save-config-trigger">Save configuration</button></div>
+        <div><button id="get-perf-trigger">Get execution time</button></div>
         <br>
         <script type="text/javascript">     
             const rawConfigs = ${rawConfigRaw};
@@ -221,7 +242,7 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 return {values:values};
             }
 
-            const saveConfigTable = new Tabulator("#saveConfig", {
+            const configTable = new Tabulator("#perfConfig", {
                 layout: "fitColumns",
                 columns: [
                     { title: "Option", field: "option", headerSort: false }, 
@@ -229,16 +250,15 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 ],
             });
             const config = rawConfigs['config'];
-            saveConfigTable.setData(names2Configs[config]);
+            configTable.setData(names2Configs[config]);
                                     
             (function () {
                 const vscode = acquireVsCodeApi();
                 
-                document.getElementById("save-config-trigger").addEventListener("click", function () {
+                document.getElementById("get-perf-trigger").addEventListener("click", function () {
                     vscode.postMessage({
-                        command: 'save',
-                        configName: document.getElementById("config-name").value.trim(),
-                        config: saveConfigTable.getData() 
+                        command: 'perf',
+                        config: configTable.getData() 
                     });
                 });
             }())
