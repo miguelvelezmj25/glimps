@@ -115,6 +115,7 @@ function _configDialog(context: vscode.ExtensionContext) {
                     if (profilePanel) {
                         profilePanel.dispose();
                     }
+                    CONFIG_TO_PROFILE = message.config;
                     vscode.commands.executeCommand('profiles.start');
                     return;
             }
@@ -140,20 +141,6 @@ function getAllConfigsRaw(dataDir: string) {
             configs.push(fileName);
         }
     });
-    return configs;
-}
-
-function getConfigsProfile(rawConfigs: string[]) {
-    let configs = "";
-    for (const config of rawConfigs) {
-        configs = configs.concat("<option value=\"");
-        configs = configs.concat(config);
-        configs = configs.concat('" ');
-        configs = configs.concat(config === CONFIG_TO_PROFILE ? 'selected="selected"' : '');
-        configs = configs.concat(">");
-        configs = configs.concat(config);
-        configs = configs.concat("</option>");
-    }
     return configs;
 }
 
@@ -291,10 +278,9 @@ function _perfProfiles(context: vscode.ExtensionContext) {
         } // Webview options. More on these later.
     );
 
-    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
-    const allConfigsRaw = getAllConfigsRaw(dataDir);
-    profilePanel.webview.html = getHotspotDiffContent(allConfigsRaw);
+    profilePanel.webview.html = getHotspotDiffContent();
 
+    const dataDir = path.join(workspaceFolders[0].uri.path, '.data');
     const sliceInfoRaw = getSliceInfoRaw(dataDir);
     const programName = sliceInfoRaw.programName;
 
@@ -303,21 +289,19 @@ function _perfProfiles(context: vscode.ExtensionContext) {
         message => {
             switch (message.command) {
                 case 'diff' :
-                    if (!profilePanel) {
+                    if (!profilePanel || !CONFIG_TO_PROFILE) {
                         return;
                     }
-                    const config1 = message.configs[0];
-                    const config2 = message.configs[1] ? message.configs[1] : message.configs[0];
                     const res = request('POST', 'http://localhost:8001/diff',
                         {
                             json: {
                                 programName: programName,
-                                config1: config1,
-                                config2: config2
+                                config: CONFIG_TO_PROFILE
                             }
                         }
                     );
                     const response = JSON.parse(res.getBody() + "");
+                    sleep(3000);
                     profilePanel.webview.postMessage({response: response.data});
                     return;
             }
@@ -335,9 +319,7 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     );
 }
 
-function getHotspotDiffContent(rawConfigs: string[]) {
-    const leftConfigs = getConfigsProfile(rawConfigs);
-
+function getHotspotDiffContent() {
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -349,14 +331,6 @@ function getHotspotDiffContent(rawConfigs: string[]) {
     </head>
     <body>
         <div style="font-size: 16px;"><b>Performance profile</b></div>
-        <br>
-        <div style="display: inline; font-size: 14px;"><b>Select configuration:</b></div>
-        <div style="display: inline;">
-            <select name="configSelect" id="configSelect">
-                ${leftConfigs}
-            </select>
-        </div>
-        <br>
         <br>
         <div id="hotspot-diff-table"></div>
         <br>
@@ -372,7 +346,7 @@ function getHotspotDiffContent(rawConfigs: string[]) {
                     dataTreeStartExpanded:false,
                     movableColumns: true, 
                     selectable: false,
-                    rowFormatter: formatBackground,
+                    placeholder:"Awaiting Data",
                     columns: [
                         {title: "Hot Spot", field: "method", sorter: "string"},
                         {title: "Self time (s)", field: "config1", sorter: "number", hozAlign: "right"},
@@ -381,37 +355,13 @@ function getHotspotDiffContent(rawConfigs: string[]) {
                         {title: "methodLong", field: "methodLong"}
                     ],
                 }); 
+                table.hideColumn("config2");
                 table.hideColumn("hotspot");
                 table.hideColumn("methodLong");
-                
-                function formatBackground(row) {
-                    const rowData = row.getData();
-                    const config1 = rowData.config1;
-                    const config2 = rowData.config2;
-                    
-                    if(config1 === "No entry" || config2 === "No entry"){
-                        for(let i = 1; i < row.getCells().length; i++) {
-                            row.getCells()[i].getElement().style.backgroundColor = "#fbf9f9";
-                            row.getCells()[i].getElement().style.color = "#990000";
-                            row.getCells()[i].getElement().style.fontWeight = "bold";
-                        }
-                    }
-                    
-                    if(Math.abs((+config1) - (+config2)) > 1.0){
-                        for(let i = 1; i < row.getCells().length; i++) {
-                            row.getCells()[i].getElement().style.backgroundColor = "#f9f9fb";
-                            row.getCells()[i].getElement().style.color = "#000066";
-                            row.getCells()[i].getElement().style.fontWeight = "bold";
-                        }
-                    } 
-                }
-                
+                                
                 function compareProfiles() {
-                    const configs = [];
-                    configs.push(document.getElementById("configSelect").value);
                     vscode.postMessage({
                         command: 'diff',
-                        configs: configs
                     });
                 }
                 compareProfiles();
@@ -421,15 +371,10 @@ function getHotspotDiffContent(rawConfigs: string[]) {
                     table.hideColumn("methodLong");
                     table.hideColumn("config1");
                     table.hideColumn("config2");
-                    
-                    const configToSelect = document.getElementById("configSelect").value;
-                    const compareSelect = document.getElementById("configSelect").value;
-                    
+                                        
                     table.addColumn({title:"Self time (s)", field:"config1", sorter: "number", hozAlign: "right"});
                     table.addColumn({title:"Self time (s)", field:"config2", sorter: "number", hozAlign: "right"});
-                    if(configToSelect === compareSelect) {
-                        table.hideColumn("config2");
-                    }
+                    table.hideColumn("config2");
                     
                     const resp = event.data.response;
                     table.setData(resp);
