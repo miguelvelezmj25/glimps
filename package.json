@@ -31,7 +31,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/miguelvelezmj25/perf-debug.git"
+    "url": "https://github.com/miguelvelezmj25/glps.git"
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
