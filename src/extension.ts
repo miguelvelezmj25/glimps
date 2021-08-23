@@ -263,7 +263,6 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
             const names2Configs = ${names2Configs};
                              
             const configTable = new Tabulator("#displayConfig", {
-                layout: "fitColumns",
                 columns: [
                     { title: "Option", field: "option", sorter: "string" }, 
                     { title: document.getElementById("configSelect").value,  field: "config1",  sorter: "string" },
@@ -277,11 +276,11 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 
                 const config = document.getElementById("configSelect").value;
                 const compare = document.getElementById("compareSelect").value;
-                configTable.addColumn({title:config, field: "config1",  sorter: "string" });
-                configTable.addColumn({title:compare, field: "config2",  sorter: "string" });
-                if(config === compare) {
-                    configTable.hideColumn("config2");
-                }
+                configTable.addColumn({title:"Config. A", field: "config1",  sorter: "string" });
+                configTable.addColumn({title:"Config. B", field: "config2",  sorter: "string" });
+                // if(config === compare) {
+                //     configTable.hideColumn("config2");
+                // }
                 
                 const configValues = names2Configs[config];
                 const compareValues = names2Configs[compare];
@@ -298,6 +297,14 @@ function getConfigDialogContent(rawConfigs: string[], names2ConfigsRaw: any, opt
                 values.forEach((value, key) => {
                     data.push({option: key, config1: value[0], config2: value[1]});
                 });
+                data = [
+                            {option:"DUPLICATES", config1:"false", config2:"true"},
+                            {option:"EVICT", config1:"false", config2:"true"},
+                            {option:"REPLICATED", config1:"false", config2:"true"},
+                            {option:"TEMPORARY", config1:"false", config2:"false"},
+                            {option:"TRANSACTIONS", config1:"false", config2:"true"},
+                       ];
+
                 configTable.setData(data);
                 
                 configTable.getRows().forEach(row => {
