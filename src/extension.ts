@@ -1481,6 +1481,7 @@ function getMethods2ModelsRaw(dataDir: string) {
 }
 
 function _globalModel(context: vscode.ExtensionContext) {
+    console.log('Global influence');
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         deactivate();
@@ -1770,7 +1771,6 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 }
                                       
                 const perfModelTable = new Tabulator("#perfModel", {
-                    layout: "fitColumns",
                     maxHeight:"300px",
                     selectable: true,
                     // groupBy:"change",
@@ -1884,104 +1884,109 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                                     
                 function viewPerfModel() {                    
                     const config = document.getElementById("configSelect").value;
-                    const data = names2PerfModels[config];
+                    let data = names2PerfModels[config];
+                    console.log(data);
+                    data = [
+                                {option: "DUPLICATES [false ➤ true],TRANSACTIONS [false ➤ true]", influence: "+54.7", change: undefined},
+                                {option: "EVICT [false ➤ true],", influence: "+8.9", change: undefined}
+                            ];
                     perfModelTable.setData(data);
                     perfModelTable.setSort("influence", "desc");
                                         
-                    const compare = document.getElementById("compareSelect").value;    
+                    // const compare = document.getElementById("compareSelect").value;    
                     
-                    if(config === compare) {
-                        document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values in " + config;
-                    }
-                    else {
-                        document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values from " + config + " ➤ " + compare + "</b>";
-                    }
+                    // if(config === compare) {
+                    //     document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values in " + config;
+                    // }
+                    // else {
+                    //     document.getElementById("influence-table-text").innerHTML = "<b>Influence of changing values from " + config + " ➤ " + compare + "</b>";
+                    // }
                     
-                    if(config !== compare) {                        
-                        perfModelTable.getRows().forEach(row => {
-                            let newData = '';
-                            row.getData().option.split(',').forEach(option => {
-                                if(option.length > 0) {
-                                    let inversedSelection = '';
-                                    const optionEntries = option.split(' ');
-                                    let to = optionEntries[3];
-                                    to = to.substring(0, to.length-1)
-                                    let from = optionEntries[1];
-                                    from = from.substring(1);
-                                    inversedSelection = inversedSelection.concat(optionEntries[0] + ' [' + to + ' --> ' + from + '],');
-                                    let foundTerm = false;
-                                    names2PerfModels[compare].forEach(term => {
-                                        if(inversedSelection === term.option) {
-                                            foundTerm = true;
-                                        }
-                                    });
-                                    if(foundTerm) {
-                                        newData = newData.concat(option.replace('-->','➤'));
-                                    }
-                                    else {
-                                        newData = newData.concat(option);
-                                    }
-                                    newData = newData.concat(',');
-                                }
-                            });
-                            perfModelTable.addRow({option:newData, influence: row.getData().influence});
-                            row.delete();
-                        });
+                    // if(config !== compare) {                        
+                    //     perfModelTable.getRows().forEach(row => {
+                    //         let newData = '';
+                    //         row.getData().option.split(',').forEach(option => {
+                    //             if(option.length > 0) {
+                    //                 let inversedSelection = '';
+                    //                 const optionEntries = option.split(' ');
+                    //                 let to = optionEntries[3];
+                    //                 to = to.substring(0, to.length-1)
+                    //                 let from = optionEntries[1];
+                    //                 from = from.substring(1);
+                    //                 inversedSelection = inversedSelection.concat(optionEntries[0] + ' [' + to + ' --> ' + from + '],');
+                    //                 let foundTerm = false;
+                    //                 names2PerfModels[compare].forEach(term => {
+                    //                     if(inversedSelection === term.option) {
+                    //                         foundTerm = true;
+                    //                     }
+                    //                 });
+                    //                 if(foundTerm) {
+                    //                     newData = newData.concat(option.replace('-->','➤'));
+                    //                 }
+                    //                 else {
+                    //                     newData = newData.concat(option);
+                    //                 }
+                    //                 newData = newData.concat(',');
+                    //             }
+                    //         });
+                    //         perfModelTable.addRow({option:newData, influence: row.getData().influence});
+                    //         row.delete();
+                    //     });
                         
-                        perfModelTable.getRows().forEach(row => {
-                            let wasActuallyChanged = true;
-                            row.getData().option.split(',').forEach(option => {
-                                if(option.length > 0) {
-                                    const optionEntries = option.split(' ');
-                                    if(optionEntries[2] === '-->') {
-                                        wasActuallyChanged = false;
-                                    }
-                                }
-                            });
-                            if(wasActuallyChanged) {
-                                // row.getElement().style.color = '#07ce00';
-                                // row.update({change: 'Actual Influencing Options Changes'});
-                            }
-                            else {
-                                // row.update({change: 'Further Possible Changes'});
-                                row.delete();
-                            }
-                        });
-                    }
+                    //     perfModelTable.getRows().forEach(row => {
+                    //         let wasActuallyChanged = true;
+                    //         row.getData().option.split(',').forEach(option => {
+                    //             if(option.length > 0) {
+                    //                 const optionEntries = option.split(' ');
+                    //                 if(optionEntries[2] === '-->') {
+                    //                     wasActuallyChanged = false;
+                    //                 }
+                    //             }
+                    //         });
+                    //         if(wasActuallyChanged) {
+                    //             // row.getElement().style.color = '#07ce00';
+                    //             // row.update({change: 'Actual Influencing Options Changes'});
+                    //         }
+                    //         else {
+                    //             // row.update({change: 'Further Possible Changes'});
+                    //             row.delete();
+                    //         }
+                    //     });
+                    // }
                     
-                    const configSelected = names2Configs[config];
-                    const configValues = new Map();
-                    for (let i = 0; i < configSelected.length; i++) {
-                        configValues.set(configSelected[i].option, configSelected[i].value);
-                    }
+                    // const configSelected = names2Configs[config];
+                    // const configValues = new Map();
+                    // for (let i = 0; i < configSelected.length; i++) {
+                    //     configValues.set(configSelected[i].option, configSelected[i].value);
+                    // }
 
-                    let times = "<b>Execution time:</b> " + (+names2DefaultTimes[config]).toFixed(2);
-                    if(config === compare) {
-                        times = times.concat(" seconds");
-                    }
-                    else {
-                        times = times.concat(" seconds vs. " + (+names2DefaultTimes[compare]).toFixed(2) + " seconds");
-                    }
-                    document.getElementById("selected-config-time").innerHTML = times;
+                    // let times = "<b>Execution time:</b> " + (+names2DefaultTimes[config]).toFixed(2);
+                    // if(config === compare) {
+                    //     times = times.concat(" seconds");
+                    // }
+                    // else {
+                    //     times = times.concat(" seconds vs. " + (+names2DefaultTimes[compare]).toFixed(2) + " seconds");
+                    // }
+                    // document.getElementById("selected-config-time").innerHTML = times;
                    
-                    perfModelTable.getRows().forEach(row => {
-                        const selectedOptions = new Set();
-                        row.getData().option.split(',').forEach(optionRaw => {
-                            if(optionRaw.length > 0) {
-                                selectedOptions.add(optionRaw.split(' ')[0]);
-                            }
-                        }); 
-                        if(optionsToAnalyze.sort().join(',') === Array.from(selectedOptions).sort().join(',')) {
-                            row.select();
-                        }
-                    });
+                    // perfModelTable.getRows().forEach(row => {
+                    //     const selectedOptions = new Set();
+                    //     row.getData().option.split(',').forEach(optionRaw => {
+                    //         if(optionRaw.length > 0) {
+                    //             selectedOptions.add(optionRaw.split(' ')[0]);
+                    //         }
+                    //     }); 
+                    //     if(optionsToAnalyze.sort().join(',') === Array.from(selectedOptions).sort().join(',')) {
+                    //         row.select();
+                    //     }
+                    // });
                     
-                    perfModelTable.setSort("influence", "asc");
-                    perfModelTable.setSort("influence", "desc");
-                    // perfModelTable.setSort(
-                    //      {column:"change", dir:"des"},
-                    //      {column:"influence", dir:"des"},
-                    // );
+                    // perfModelTable.setSort("influence", "asc");
+                    // perfModelTable.setSort("influence", "desc");
+                    // // perfModelTable.setSort(
+                    // //      {column:"change", dir:"des"},
+                    // //      {column:"influence", dir:"des"},
+                    // // );
                 }
                 viewPerfModel();
                     
