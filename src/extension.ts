@@ -555,154 +555,154 @@ function _slicing(context: vscode.ExtensionContext) {
     const legend = vscode.Uri.file(path.join(context.extensionPath, 'media', 'legend.png'));
     slicingPanel.webview.html = getSlicingContent(methods2Options, methods2Lines, slicingPanel.webview.asWebviewUri(legend));
 
-    const sliceInfoRaw = getSliceInfoRaw(dataDir);
-    const port = sliceInfoRaw.port;
-    const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
-    const regex = /\./g;
-    // Handle messages from the webview
-    slicingPanel.webview.onDidReceiveMessage(
-        message => {
-            switch (message.command) {
-                case 'link': {
-                    const className = message.method.substring(0, message.method.lastIndexOf('.')).replace(regex, '/');
-                    const method = message.method.substring(message.method.lastIndexOf('.') + 1);
-                    let uri = vscode.Uri.file(filesRoot + className + '.java');
-                    openFileAndNavigate(uri, method);
-                    return;
-                }
-                case 'slice': {
-                    OPTIONS_TO_ANALYZE = message.selectedOptions;
-                    if (!message.target) {
-                        targetClass = "";
-                        target = -1;
-                        METHOD_TO_PROFILE = '';
-                    } else {
-                        methods2Lines.forEach((value, key) => {
-                            if ((targetClass + ':' + target) === value) {
-                                METHOD_TO_PROFILE = key;
-                            }
-                        });
-                    }
+    // const sliceInfoRaw = getSliceInfoRaw(dataDir);
+    // const port = sliceInfoRaw.port;
+    // const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
+    // const regex = /\./g;
+    // // Handle messages from the webview
+    // slicingPanel.webview.onDidReceiveMessage(
+    //     message => {
+    //         switch (message.command) {
+    //             case 'link': {
+    //                 const className = message.method.substring(0, message.method.lastIndexOf('.')).replace(regex, '/');
+    //                 const method = message.method.substring(message.method.lastIndexOf('.') + 1);
+    //                 let uri = vscode.Uri.file(filesRoot + className + '.java');
+    //                 openFileAndNavigate(uri, method);
+    //                 return;
+    //             }
+    //             case 'slice': {
+    //                 OPTIONS_TO_ANALYZE = message.selectedOptions;
+    //                 if (!message.target) {
+    //                     targetClass = "";
+    //                     target = -1;
+    //                     METHOD_TO_PROFILE = '';
+    //                 } else {
+    //                     methods2Lines.forEach((value, key) => {
+    //                         if ((targetClass + ':' + target) === value) {
+    //                             METHOD_TO_PROFILE = key;
+    //                         }
+    //                     });
+    //                 }
 
-                    if (!slicingPanel) {
-                        return;
-                    }
-                    if (message.selectedOptions.length === 0 || targetClass === "" || target <= 0) {
-                        filesToHighlight.clear();
-                        traceStyle.dispose();
-                        slicingPanel.webview.postMessage({connections: {}});
-                        return;
-                    }
+    //                 if (!slicingPanel) {
+    //                     return;
+    //                 }
+    //                 if (message.selectedOptions.length === 0 || targetClass === "" || target <= 0) {
+    //                     filesToHighlight.clear();
+    //                     traceStyle.dispose();
+    //                     slicingPanel.webview.postMessage({connections: {}});
+    //                     return;
+    //                 }
 
-                    let lines: number[] = [];
-                    message.selectedOptions.forEach((option: string) => {
-                        lines.push(+commonSources[option][1]);
-                    });
+    //                 let lines: number[] = [];
+    //                 message.selectedOptions.forEach((option: string) => {
+    //                     lines.push(+commonSources[option][1]);
+    //                 });
 
-                    const res = request('POST', 'http://localhost:' + port + '/slice',
-                        {
-                            json: {
-                                sourceClass: (commonSources[message.selectedOptions[0]][2].replace(regex, '/') + '.java'),
-                                sourceLines: lines,
-                                targetClass: targetClass,
-                                targetLines: target,
-                            }
-                        }
-                    );
-                    const response = JSON.parse(res.getBody() + "");
-                    setFilesToHighlight(response.slice);
-                    slicingPanel.webview.postMessage({
-                        connections: getSliceConnections(response.connections, response.targetMethodName),
-                        targetMethodName: response.targetMethodName
-                    });
+    //                 const res = request('POST', 'http://localhost:' + port + '/slice',
+    //                     {
+    //                         json: {
+    //                             sourceClass: (commonSources[message.selectedOptions[0]][2].replace(regex, '/') + '.java'),
+    //                             sourceLines: lines,
+    //                             targetClass: targetClass,
+    //                             targetLines: target,
+    //                         }
+    //                     }
+    //                 );
+    //                 const response = JSON.parse(res.getBody() + "");
+    //                 setFilesToHighlight(response.slice);
+    //                 slicingPanel.webview.postMessage({
+    //                     connections: getSliceConnections(response.connections, response.targetMethodName),
+    //                     targetMethodName: response.targetMethodName
+    //                 });
 
-                    // const className = commonSources[message.selectedOptions[0]][2].replace(regex, '/');
-                    // const method = 'main';
-                    // let uri = vscode.Uri.file(filesRoot + className + '.java');
-                    // openFileAndNavigate(uri, method);
-                    return;
-                }
-                case 'globalInfluence' :
-                    OPTIONS_TO_ANALYZE = message.options;
-                    METHOD_TO_PROFILE = message.target.substring(0, message.target.indexOf("("));
-                    if (globalModelPanel) {
-                        globalModelPanel.dispose();
-                    }
-                    vscode.commands.executeCommand('globalModel.start');
-                    return;
-                case 'profile' :
-                    OPTIONS_TO_ANALYZE = message.options;
-                    METHOD_TO_PROFILE = message.target.substring(0, message.target.indexOf("("));
-                    if (profilePanel) {
-                        profilePanel.dispose();
-                    }
-                    vscode.commands.executeCommand('perfProfiles.start');
-                    return;
-            }
-        },
-        undefined,
-        context.subscriptions
-    );
+    //                 // const className = commonSources[message.selectedOptions[0]][2].replace(regex, '/');
+    //                 // const method = 'main';
+    //                 // let uri = vscode.Uri.file(filesRoot + className + '.java');
+    //                 // openFileAndNavigate(uri, method);
+    //                 return;
+    //             }
+    //             case 'globalInfluence' :
+    //                 OPTIONS_TO_ANALYZE = message.options;
+    //                 METHOD_TO_PROFILE = message.target.substring(0, message.target.indexOf("("));
+    //                 if (globalModelPanel) {
+    //                     globalModelPanel.dispose();
+    //                 }
+    //                 vscode.commands.executeCommand('globalModel.start');
+    //                 return;
+    //             case 'profile' :
+    //                 OPTIONS_TO_ANALYZE = message.options;
+    //                 METHOD_TO_PROFILE = message.target.substring(0, message.target.indexOf("("));
+    //                 if (profilePanel) {
+    //                     profilePanel.dispose();
+    //                 }
+    //                 vscode.commands.executeCommand('perfProfiles.start');
+    //                 return;
+    //         }
+    //     },
+    //     undefined,
+    //     context.subscriptions
+    // );
 
-    const sourcesFile = commonSources[Object.keys(commonSources)[0]][2].replace(regex, '/') + '.java';
-    const hotspotInfluencesRaw = getHotspotInfluencesRaw(dataDir);
-    vscode.window.onDidChangeActiveTextEditor(() => {
-        if (!vscode.window.activeTextEditor) {
-            return;
-        }
+    // const sourcesFile = commonSources[Object.keys(commonSources)[0]][2].replace(regex, '/') + '.java';
+    // const hotspotInfluencesRaw = getHotspotInfluencesRaw(dataDir);
+    // vscode.window.onDidChangeActiveTextEditor(() => {
+    //     if (!vscode.window.activeTextEditor) {
+    //         return;
+    //     }
 
-        const doc = vscode.window.activeTextEditor.document;
-        let editorPath = doc.uri.path;
-        editorPath = editorPath.replace(workspaceFolders[0].uri.path, "");
-        editorPath = editorPath.replace("/src/main/java/", "");
+    //     const doc = vscode.window.activeTextEditor.document;
+    //     let editorPath = doc.uri.path;
+    //     editorPath = editorPath.replace(workspaceFolders[0].uri.path, "");
+    //     editorPath = editorPath.replace("/src/main/java/", "");
 
-        Object.entries(hotspotInfluencesRaw).forEach(entry => {
-            if (editorPath.endsWith(entry[0])) {
-                hotspotStyle.dispose();
-                hotspotStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
-                let ranges: vscode.Range[] = [];
-                entry[1].forEach(entry => {
-                    ranges.push(doc.lineAt((+entry - 1)).range);
-                });
-                if (vscode.window.activeTextEditor) {
-                    vscode.window.activeTextEditor.setDecorations(hotspotStyle, ranges);
-                }
-            }
-        });
+    //     Object.entries(hotspotInfluencesRaw).forEach(entry => {
+    //         if (editorPath.endsWith(entry[0])) {
+    //             hotspotStyle.dispose();
+    //             hotspotStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,0,0,0.25)'});
+    //             let ranges: vscode.Range[] = [];
+    //             entry[1].forEach(entry => {
+    //                 ranges.push(doc.lineAt((+entry - 1)).range);
+    //             });
+    //             if (vscode.window.activeTextEditor) {
+    //                 vscode.window.activeTextEditor.setDecorations(hotspotStyle, ranges);
+    //             }
+    //         }
+    //     });
 
-        if (editorPath.endsWith(sourcesFile)) {
-            sourceStyle.dispose();
-            sourceStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(0,255,0,0.25)'});
-            let ranges: vscode.Range[] = [];
-            OPTIONS_TO_ANALYZE.forEach(entry => {
-                ranges.push(doc.lineAt(+commonSources[entry][1] - 1).range);
-            });
-            vscode.window.activeTextEditor.setDecorations(sourceStyle, ranges);
-        }
+    //     if (editorPath.endsWith(sourcesFile)) {
+    //         sourceStyle.dispose();
+    //         sourceStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(0,255,0,0.25)'});
+    //         let ranges: vscode.Range[] = [];
+    //         OPTIONS_TO_ANALYZE.forEach(entry => {
+    //             ranges.push(doc.lineAt(+commonSources[entry][1] - 1).range);
+    //         });
+    //         vscode.window.activeTextEditor.setDecorations(sourceStyle, ranges);
+    //     }
 
-        let lines = new Set<string>();
-        filesToHighlight.forEach((value, key) => {
-            if (editorPath.endsWith(key)) {
-                lines = value;
-            }
-        });
-        if (!lines || lines.size === 0) {
-            return;
-        }
+    //     let lines = new Set<string>();
+    //     filesToHighlight.forEach((value, key) => {
+    //         if (editorPath.endsWith(key)) {
+    //             lines = value;
+    //         }
+    //     });
+    //     if (!lines || lines.size === 0) {
+    //         return;
+    //     }
 
-        let ranges: vscode.Range[] = [];
-        for (const lineNumber of lines.values()) {
-            if (+lineNumber <= 0) {
-                continue;
-            }
+    //     let ranges: vscode.Range[] = [];
+    //     for (const lineNumber of lines.values()) {
+    //         if (+lineNumber <= 0) {
+    //             continue;
+    //         }
 
-            const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
-            ranges.push(line.range);
-        }
-        traceStyle.dispose();
-        traceStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
-        vscode.window.activeTextEditor.setDecorations(traceStyle, ranges);
-    }, null, context.subscriptions);
+    //         const line = vscode.window.activeTextEditor.document.lineAt((+lineNumber - 1));
+    //         ranges.push(line.range);
+    //     }
+    //     traceStyle.dispose();
+    //     traceStyle = vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,210,127,0.2)'});
+    //     vscode.window.activeTextEditor.setDecorations(traceStyle, ranges);
+    // }, null, context.subscriptions);
 }
 
 function setFilesToHighlight(data: any[]) {
