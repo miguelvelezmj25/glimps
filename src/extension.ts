@@ -1733,7 +1733,6 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 let selectedRow = undefined;
                 
                 const localInfluenceTable = new Tabulator("#localInfluence", {
-                    layout: "fitColumns",
                     maxHeight:"300px",
                     columns: [
                         { title: "Influenced Hot Spot", field: "methods", sorter: "string" }, 
@@ -1789,6 +1788,11 @@ function getGlobalModelContent(names2PerfModelsRaw: any, rawConfigs: string[], n
                 function selectInfluence(data, rows) {
                     if(rows.length === 0) {
                         localInfluenceTable.setData([]);
+                        localInfluenceTable.setData([
+                                                        {methods: "Cursor.put(...)", influence: "+42.9"},
+                                                        {methods: "FileManager.read(...)", influence: "+10.3"},
+                                                        {methods: "Internal.serialize(...)", influence: "+1.5"},
+                                                    ]);
                         document.getElementById("trace-trigger").innerHTML = traceButtonText([], '');                
                         return;
                     }
