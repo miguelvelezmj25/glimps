@@ -952,73 +952,73 @@ function _perfProfiles(context: vscode.ExtensionContext) {
     const methods2ModelsRaw = getMethods2ModelsRaw(dataDir);
     profilePanel.webview.html = getHotspotDiffContent(allConfigsRaw, names2ConfigsRaw, methods2ModelsRaw);
 
-    const sliceInfoRaw = getSliceInfoRaw(dataDir);
-    const programName = sliceInfoRaw.programName;
-    const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
+    // const sliceInfoRaw = getSliceInfoRaw(dataDir);
+    // const programName = sliceInfoRaw.programName;
+    // const filesRoot = workspaceFolders[0].uri.path + '/src/main/java/';
 
-    // Handle messages from the webview
-    profilePanel.webview.onDidReceiveMessage(
-        message => {
-            switch (message.command) {
-                case 'diff' :
-                    if (!profilePanel) {
-                        return;
-                    }
-                    const config1 = message.configs[0];
-                    const config2 = message.configs[1] ? message.configs[1] : message.configs[0];
-                    const res = request('POST', 'http://localhost:8001/diff',
-                        {
-                            json: {
-                                programName: programName,
-                                config1: config1,
-                                config2: config2
-                            }
-                        }
-                    );
-                    const response = JSON.parse(res.getBody() + "");
-                    profilePanel.webview.postMessage({response: response.data});
-                    return;
-                case 'open-influence' :
-                    CONFIG_TO_PROFILE = message.config;
-                    CONFIG_TO_COMPARE = message.compare;
-                    METHOD_TO_PROFILE = message.method;
-                    OPTIONS_TO_ANALYZE = message.options;
-                    if (globalModelPanel) {
-                        globalModelPanel.dispose();
-                    }
-                    vscode.commands.executeCommand('globalModel.start');
-                    return;
-                case 'open-hotspot' :
-                    let methodData = message.method;
-                    methodData = methodData.substring(0, methodData.indexOf("("));
-                    const fileData = methodData.split(".");
-                    let className = '';
-                    for (let i = 0; i < (fileData.length - 1); i++) {
-                        className = className.concat(fileData[i]);
-                        if (i < (fileData.length - 2)) {
-                            className = className.concat("/");
-                        }
-                    }
-                    if (className.indexOf("$") >= 0) {
-                        className = className.substring(0, className.indexOf("$"));
-                    }
+    // // Handle messages from the webview
+    // profilePanel.webview.onDidReceiveMessage(
+    //     message => {
+    //         switch (message.command) {
+    //             case 'diff' :
+    //                 if (!profilePanel) {
+    //                     return;
+    //                 }
+    //                 const config1 = message.configs[0];
+    //                 const config2 = message.configs[1] ? message.configs[1] : message.configs[0];
+    //                 const res = request('POST', 'http://localhost:8001/diff',
+    //                     {
+    //                         json: {
+    //                             programName: programName,
+    //                             config1: config1,
+    //                             config2: config2
+    //                         }
+    //                     }
+    //                 );
+    //                 const response = JSON.parse(res.getBody() + "");
+    //                 profilePanel.webview.postMessage({response: response.data});
+    //                 return;
+    //             case 'open-influence' :
+    //                 CONFIG_TO_PROFILE = message.config;
+    //                 CONFIG_TO_COMPARE = message.compare;
+    //                 METHOD_TO_PROFILE = message.method;
+    //                 OPTIONS_TO_ANALYZE = message.options;
+    //                 if (globalModelPanel) {
+    //                     globalModelPanel.dispose();
+    //                 }
+    //                 vscode.commands.executeCommand('globalModel.start');
+    //                 return;
+    //             case 'open-hotspot' :
+    //                 let methodData = message.method;
+    //                 methodData = methodData.substring(0, methodData.indexOf("("));
+    //                 const fileData = methodData.split(".");
+    //                 let className = '';
+    //                 for (let i = 0; i < (fileData.length - 1); i++) {
+    //                     className = className.concat(fileData[i]);
+    //                     if (i < (fileData.length - 2)) {
+    //                         className = className.concat("/");
+    //                     }
+    //                 }
+    //                 if (className.indexOf("$") >= 0) {
+    //                     className = className.substring(0, className.indexOf("$"));
+    //                 }
 
-                    const method = fileData[fileData.length - 1];
-                    let uri = vscode.Uri.file(filesRoot + className + '.java');
-                    openFileAndNavigate(uri, method);
-                    return;
-                case 'trace' :
-                    OPTIONS_TO_ANALYZE = message.options;
-                    METHOD_TO_PROFILE = message.method;
-                    if (slicingPanel) {
-                        slicingPanel.dispose();
-                    }
-                    vscode.commands.executeCommand('slicing.start');
-            }
-        },
-        undefined,
-        context.subscriptions
-    );
+    //                 const method = fileData[fileData.length - 1];
+    //                 let uri = vscode.Uri.file(filesRoot + className + '.java');
+    //                 openFileAndNavigate(uri, method);
+    //                 return;
+    //             case 'trace' :
+    //                 OPTIONS_TO_ANALYZE = message.options;
+    //                 METHOD_TO_PROFILE = message.method;
+    //                 if (slicingPanel) {
+    //                     slicingPanel.dispose();
+    //                 }
+    //                 vscode.commands.executeCommand('slicing.start');
+    //         }
+    //     },
+    //     undefined,
+    //     context.subscriptions
+    // );
 
     profilePanel.onDidDispose(
         () => {
@@ -1068,6 +1068,7 @@ function openFileAndNavigate(uri: vscode.Uri, method: string) {
 }
 
 function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, methods2ModelsRaw: any) {
+    console.log('Hotspots');
     const leftConfigs = getConfigsProfile(rawConfigs);
     const rightConfigs = getConfigsCompare(rawConfigs);
     const names2LocalModels = getNames2LocalModels(names2ConfigsRaw, methods2ModelsRaw);
@@ -1196,7 +1197,6 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                 }
                                                
                 const table = new Tabulator("#hotspot-diff-table", {
-                    layout:"fitData",
                     // layout:"fitColumns",
                     maxHeight:"300px",
                     dataTree:true,
@@ -1208,14 +1208,23 @@ function getHotspotDiffContent(rawConfigs: string[], names2ConfigsRaw: any, meth
                     rowSelectionChanged:showInfluence,
                     columns: [
                         {title: "Hot Spot", field: "method", sorter: "string"},
-                        {title: document.getElementById("configSelect").value, field: "config1", sorter: "number", hozAlign: "right"},
-                        {title: document.getElementById("compareSelect").value, field: "config2", sorter: "number", hozAlign: "right"},
+                        {title: "Config. A", field: "config1", sorter: "number", hozAlign: "right"},
+                        {title: "Config. B", field: "config2", sorter: "number", hozAlign: "right"},
                         {title: "hotspot", field: "hotspot"},
                         {title: "methodLong", field: "methodLong"}
                     ],
                 }); 
                 table.hideColumn("hotspot");
                 table.hideColumn("methodLong");
+                table.setData([
+                    {method: "Cursor.put(...)", config1:"1.5", config2:"44.4", "_children":[
+                        {method: "Main.main(...)", config1:"1.5", config2:"44.4"}
+                    ]},
+                    {method: "FileManager.read(...)", config1:"No entry", config2:"10.3", "_children":[
+                        {method: "Env.newImpl(...)", config1:"No entry", config2:"10.3", "_children":[]}
+                    ]},
+                    {method: "Internal.serialize(...)", config1:"0.3", config2:"1.8", "_children":[]},
+                ]);
                 
                 function formatBackground(row) {
                     const rowData = row.getData();
